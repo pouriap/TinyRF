@@ -8,6 +8,5 @@ void enableReceive(uint8_t portNumber);
 void send(uint8_t data, uint8_t pin);
 void interrupt_routine();
 uint8_t getReceivedData();
-unsigned long getDuration();
 
-#endif  /* ATTTINY13_RF_H */
+#endif  /* ATTTINY13_RF_H */ 
