@@ -1,18 +1,44 @@
 #include "Arduino.h"
 #include "ATtiny13_RF.h"
 
-const unsigned int START_PULSE_DURATION = 1500;
-const unsigned int START_TRIGGER = 1400;
-const unsigned int ONE_PULSE_DURATION = 1000;
-const unsigned int ONE_TRIGGER = 900;
-const unsigned int ZERO_PULSE_DURATION = 500;
-const unsigned int ZERO_TRIGGER = 400;
-const unsigned int HIGH_PERIOD_DURATION = 100;
+/*
+const unsigned int START_PULSE_DURATION = 8000;
+const unsigned int START_TRIGGER = 7950;
+const unsigned int ONE_PULSE_DURATION = 5000;
+const unsigned int ONE_TRIGGER = 4950;
+const unsigned int ZERO_PULSE_DURATION = 3000;
+const unsigned int ZERO_TRIGGER = 2950;
+const unsigned int HIGH_PERIOD_DURATION = 2000;
+const int TRIGER_ERROR = 50;
+*/
+
+const unsigned int START_PULSE_DURATION = 6000;
+const unsigned int START_TRIGGER = 5950;
+const unsigned int ONE_PULSE_DURATION = 4000;
+const unsigned int ONE_TRIGGER = 3950;
+const unsigned int ZERO_PULSE_DURATION = 3000;
+const unsigned int ZERO_TRIGGER = 2950;
+const unsigned int HIGH_PERIOD_DURATION = 2000;
+const int TRIGER_ERROR = 50;
+
+/*
+const unsigned int START_PULSE_DURATION = 3000;
+const unsigned int START_TRIGGER = 2950;
+const unsigned int ONE_PULSE_DURATION = 2000;
+const unsigned int ONE_TRIGGER = 1950;
+const unsigned int ZERO_PULSE_DURATION = 1500;
+const unsigned int ZERO_TRIGGER = 1450;
+const unsigned int HIGH_PERIOD_DURATION = 1000;
+const int TRIGER_ERROR = 50;
+*/
 
 const int FRAME_PULSES = 8;	//8 pulses of data
 unsigned int pulses[FRAME_PULSES];
 volatile uint8_t receivedData = 0x00;
 unsigned long duration = 0;
+unsigned int packetsInLastSecond = 0;
+unsigned long lastPPSCalcTime = 0;
+unsigned int pps = 0;
 
 
 /**
@@ -41,7 +67,7 @@ void enableReceive(uint8_t pin){
 }
 
 bool isPulseTriggered(unsigned int pulse, unsigned int trigger){
-	if( (pulse < (trigger+20)) && (pulse > (trigger-20)) ){
+	if( (pulse < (trigger+TRIGER_ERROR)) && (pulse > (trigger-TRIGER_ERROR)) ){
 		return true;
 	}
 	return false;
@@ -64,7 +90,16 @@ void process_received(){
 			return;
 		}
 	}
-	Serial.print("received: ");Serial.println(receivedData);
+
+	//Serial.print("received: ");Serial.print(receivedData);Serial.print(" - pps: ");Serial.println(pps);
+	packetsInLastSecond++;
+
+	if((millis()-lastPPSCalcTime)>1000){
+		pps = packetsInLastSecond;
+		lastPPSCalcTime = millis();
+		packetsInLastSecond = 0;
+	}
+
 }
 
 void interrupt_routine(){
@@ -99,6 +134,14 @@ void interrupt_routine(){
 }
 
 void send(uint8_t data, uint8_t pin){
+
+	//premeable
+	//for(int i=0; i<32; i++){
+	//	digitalWrite(pin, LOW);
+	//	delayMicroseconds(50);
+	//	digitalWrite(pin, HIGH);
+	//	delayMicroseconds(50);
+	//}
 
 	digitalWrite(pin, LOW);
 	delayMicroseconds(START_PULSE_DURATION - HIGH_PERIOD_DURATION);
