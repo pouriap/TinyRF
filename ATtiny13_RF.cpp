@@ -17,6 +17,7 @@ const unsigned int ONE_PULSE_DURATION = 4000;
 const unsigned int ZERO_PULSE_DURATION = 3000;
 const unsigned int HIGH_PERIOD_DURATION = 2000;
 const int TRIGER_ERROR = 50;
+const int START_PULSE_MAX_ERROR = 500;
 
 /*
 const unsigned int START_PULSE_DURATION = 3000;
@@ -32,8 +33,8 @@ const int TRIGER_ERROR = 50;
 volatile bool transmitOngoing = false;
 const int MAX_MSG_LEN = 16;
 volatile uint8_t bufIndex = 0;
-uint8_t rcvdBytes[MAX_MSG_LEN];
-volatile unsigned int rcvdPulses[8];
+char rcvdBytes[MAX_MSG_LEN];
+volatile unsigned long rcvdPulses[8];
 
 
 /**
@@ -83,27 +84,14 @@ void enableReceive(uint8_t pin){
 	attachInterrupt(digitalPinToInterrupt(pin), interrupt_routine, FALLING);
 }
 
-bool isPulseTriggered(unsigned int pulse, unsigned int trigger){
-	/**
-	* due to inaccuracies of delayMicroseconds() and due to computational times 
-	* the periods are usually 40-80us longer than they should be, so we only check if they 
-	* are greater than the specified duration
-	* if( (pulse < (trigger+TRIGER_ERROR)) && (pulse > (trigger-TRIGER_ERROR)) ){
-	**/
-	if( pulse > (trigger-TRIGER_ERROR) ){
-		return true;
-	}
-	return false;
-}
-
 bool process_received_byte(){
 	uint8_t receivedData = 0x00;
 	for(int i=0; i<8; i++){
-		//if pulse is greater than 200us then it will not be here
-		if(isPulseTriggered(rcvdPulses[i], ONE_PULSE_DURATION)){
+		//if pulse is greater than START_PULSE_DURATION then we will not be here
+		if( rcvdPulses[i] > (ONE_PULSE_DURATION - TRIGER_ERROR) ){
 			receivedData |= (1<<i);
 		}
-		else if(!isPulseTriggered(rcvdPulses[i], ZERO_PULSE_DURATION)){
+		else if( rcvdPulses[i] < (ZERO_PULSE_DURATION - TRIGER_ERROR) ){
 			//curropted
 			return false;
 		}
@@ -114,6 +102,7 @@ bool process_received_byte(){
 		return false;
 	}
 	else{
+		//Serial.print("r:");Serial.println(receivedData);
 		rcvdBytes[bufIndex++] = receivedData;
 		return true;
 	}
@@ -125,11 +114,15 @@ void interrupt_routine(){
 	static unsigned int pulse_count = 0;
 
 	unsigned long time = micros();
-	unsigned int pulseDuration = time - lastTime;
+	unsigned long pulseDuration = time - lastTime;
 	lastTime = time;
 	
 	//start of transmission
-	if(isPulseTriggered(pulseDuration, START_PULSE_DURATION)){
+	//we also check the maximum duration for start pulse so that our start detection will be more accurate 
+	if( 
+		pulseDuration > (START_PULSE_DURATION - TRIGER_ERROR) && 
+		pulseDuration < (START_PULSE_DURATION + START_PULSE_MAX_ERROR) 
+	){
 		transmitOngoing = true;
 		pulse_count = 0;
 	}
@@ -139,7 +132,7 @@ void interrupt_routine(){
 	}
 
 	if(pulse_count == 8){
-		//reset if received bad byte
+		//reset if received bad byte (i.e noise = end of transmission)
 		if(!process_received_byte()){
 			transmitOngoing = false;
 		}
@@ -152,11 +145,14 @@ void interrupt_routine(){
 void send(char* data, uint8_t len, uint8_t pin){
 
 	//premeable
-	for(uint8_t i=0; i<16; i++){
-		digitalWrite(pin, LOW);
-		delayMicroseconds(50);
-		digitalWrite(pin, HIGH);
-		delayMicroseconds(50);
+	//for(uint8_t i=0; i<64; i++){
+	//	digitalWrite(pin, LOW);
+	//	delayMicroseconds(1000);
+	//	digitalWrite(pin, HIGH);
+	//	delayMicroseconds(1000);
+	//}
+	for(int i=0; i<4; i++){
+		transmitByte(0x51, pin);
 	}
 
 	//start pulse
@@ -171,7 +167,6 @@ void send(char* data, uint8_t len, uint8_t pin){
 	//data
 	for(uint8_t i=0; i<len; i++){
 		transmitByte(data[i], pin);
-		transmitByte(~data[i], pin);
 	}
 
 	///crc
@@ -195,14 +190,15 @@ void transmitByte(char byte, uint8_t pin){
 			delayMicroseconds(HIGH_PERIOD_DURATION-4);
 		}
 		digitalWrite(pin, LOW);
-		delayMicroseconds(100);
 	}
 }
 
 void getReceivedData(uint8_t buf[]){
+	strcpy(buf, "");
 	if(transmitOngoing){
 		return;
 	}
+	//Serial.print("giving: ");Serial.println(rcvdBytes);
 	for(int i=0; i<MAX_MSG_LEN; i++){
 		buf[i] = rcvdBytes[i];
 		rcvdBytes[i] = '\0';
