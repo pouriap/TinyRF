@@ -12,12 +12,12 @@ const unsigned int HIGH_PERIOD_DURATION = 2000;
 const int TRIGER_ERROR = 50;
 */
 
-const unsigned int START_PULSE_DURATION = 6000;
-const unsigned int ONE_PULSE_DURATION = 4000;
-const unsigned int ZERO_PULSE_DURATION = 3000;
-const unsigned int HIGH_PERIOD_DURATION = 2000;
+const unsigned int START_PULSE_DURATION = 2000;
+const unsigned int ONE_PULSE_DURATION = 1000;
+const unsigned int ZERO_PULSE_DURATION = 800;
+const unsigned int HIGH_PERIOD_DURATION = 500;
 const int TRIGER_ERROR = 50;
-const int START_PULSE_MAX_ERROR = 500;
+const int START_PULSE_MAX_ERROR = 400;
 
 /*
 const unsigned int START_PULSE_DURATION = 3000;
@@ -203,14 +203,15 @@ uint8_t getReceivedData(uint8_t buf[]){
 	for(int i=0; i<dataLen; i++){
 		buf[i] = rcvdBytes[i+1];
 	}
+	//we got the data so reset the index
+	bufIndex = 0;
 	//calculate crc
 	byte crcRcvd = rcvdBytes[dataLen+1];
+	//todo: add len to crc as well
 	byte crcCalc = crc8(buf, dataLen);
 	if(crcRcvd != crcCalc){
 		return TINYRF_ERR_BAD_CRC;
 	}
-
-	bufIndex = 0;
 	return TINYRF_ERR_SUCCESS;
 }
 
