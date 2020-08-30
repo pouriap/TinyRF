@@ -29,9 +29,12 @@ const unsigned int HIGH_PERIOD_DURATION = 1000;
 const int TRIGER_ERROR = 50;
 */
 
-const int FRAME_PULSES = 8;	//8 pulses of data
-unsigned int pulses[FRAME_PULSES];
-volatile uint8_t receivedData = 0x00;
+volatile bool transmitOngoing = false;
+const int MAX_MSG_LEN = 16;
+volatile uint8_t bufIndex = 0;
+uint8_t rcvdBytes[MAX_MSG_LEN];
+volatile unsigned int rcvdPulses[8];
+
 
 /**
  * data: array of bytes
@@ -54,6 +57,28 @@ uint8_t checksum8(uint8_t data[], uint8_t len){
 	return (uint8_t) ~sum;
 }
 
+//CRC-8 - based on the CRC8 formulas by Dallas/Maxim
+//code released under the therms of the GNU GPL 3.0 license
+uint8_t crc8(uint8_t data[], uint8_t len){
+	byte crc = 0x00;
+	while (len--)
+	{
+		byte extract = *data++;
+		for (byte tempI = 8; tempI; tempI--)
+		{
+			byte sum = (crc ^ extract) & 0x01;
+			crc >>= 1;
+			if (sum)
+			{
+				crc ^= 0x8C;
+			}
+			extract >>= 1;
+		}
+	}
+	return crc;
+}
+
+
 void enableReceive(uint8_t pin){
 	attachInterrupt(digitalPinToInterrupt(pin), interrupt_routine, FALLING);
 }
@@ -71,27 +96,33 @@ bool isPulseTriggered(unsigned int pulse, unsigned int trigger){
 	return false;
 }
 
-void process_received(){
-	receivedData = 0x00;
-	for(int i=0; i<FRAME_PULSES; i++){
+bool process_received_byte(){
+	uint8_t receivedData = 0x00;
+	for(int i=0; i<8; i++){
 		//if pulse is greater than 200us then it will not be here
-		if(isPulseTriggered(pulses[i], ONE_PULSE_DURATION)){
+		if(isPulseTriggered(rcvdPulses[i], ONE_PULSE_DURATION)){
 			receivedData |= (1<<i);
 		}
-		else if(!isPulseTriggered(pulses[i], ZERO_PULSE_DURATION)){
+		else if(!isPulseTriggered(rcvdPulses[i], ZERO_PULSE_DURATION)){
 			//curropted
-			receivedData = 0;
-			return;
+			return false;
 		}
 	}
-
+	if(bufIndex>=MAX_MSG_LEN){
+		Serial.println("BUFFER OVERFLOW");
+		bufIndex = 0;
+		return false;
+	}
+	else{
+		rcvdBytes[bufIndex++] = receivedData;
+		return true;
+	}
 }
 
 void interrupt_routine(){
 
 	static unsigned long lastTime = 0;
 	static unsigned int pulse_count = 0;
-	static bool startReceived = false;
 
 	unsigned long time = micros();
 	unsigned int pulseDuration = time - lastTime;
@@ -99,40 +130,59 @@ void interrupt_routine(){
 	
 	//start of transmission
 	if(isPulseTriggered(pulseDuration, START_PULSE_DURATION)){
-		startReceived = true;
+		transmitOngoing = true;
 		pulse_count = 0;
 	}
-	else if(startReceived){
-		pulses[pulse_count] = pulseDuration;
+	else if(transmitOngoing){
+		rcvdPulses[pulse_count] = pulseDuration;
 		pulse_count++;
 	}
 
-	if(pulse_count == FRAME_PULSES){
-		process_received();
-		startReceived = false;
+	if(pulse_count == 8){
+		//reset if received bad byte
+		if(!process_received_byte()){
+			transmitOngoing = false;
+		}
 		pulse_count = 0;
 	}
 
-
 }
 
-void send(uint8_t data, uint8_t pin){
+
+void send(char* data, uint8_t len, uint8_t pin){
 
 	//premeable
-	for(int i=0; i<16; i++){
+	for(uint8_t i=0; i<16; i++){
 		digitalWrite(pin, LOW);
 		delayMicroseconds(50);
 		digitalWrite(pin, HIGH);
 		delayMicroseconds(50);
 	}
 
+	//start pulse
 	digitalWrite(pin, LOW);
 	delayMicroseconds(START_PULSE_DURATION - HIGH_PERIOD_DURATION);
 	digitalWrite(pin, HIGH);
 	delayMicroseconds(HIGH_PERIOD_DURATION-4);	//-4 because digitalWrite takes 3.6us
-	for(int i=0; i<8; i++){
+
+	//len
+	transmitByte(len, pin);
+
+	//data
+	for(uint8_t i=0; i<len; i++){
+		transmitByte(data[i], pin);
+		transmitByte(~data[i], pin);
+	}
+
+	///crc
+	uint8_t crc = crc8(data, len);
+	transmitByte(crc, pin);
+}
+
+void transmitByte(char byte, uint8_t pin){
+	for(uint8_t i=0; i<8; i++){
 		//if 1
-		if(data & (1<<i)){
+		if(byte & (1<<i)){
 			digitalWrite(pin, LOW);
 			delayMicroseconds(ONE_PULSE_DURATION - HIGH_PERIOD_DURATION);
 			digitalWrite(pin, HIGH);
@@ -145,10 +195,18 @@ void send(uint8_t data, uint8_t pin){
 			delayMicroseconds(HIGH_PERIOD_DURATION-4);
 		}
 		digitalWrite(pin, LOW);
+		delayMicroseconds(100);
 	}
 }
 
-uint8_t getReceivedData(){
-	return receivedData;
+void getReceivedData(uint8_t buf[]){
+	if(transmitOngoing){
+		return;
+	}
+	for(int i=0; i<MAX_MSG_LEN; i++){
+		buf[i] = rcvdBytes[i];
+		rcvdBytes[i] = '\0';
+	}
+	bufIndex = 0;
 }
 
