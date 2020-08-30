@@ -193,16 +193,24 @@ void transmitByte(char byte, uint8_t pin){
 	}
 }
 
-void getReceivedData(uint8_t buf[]){
-	strcpy(buf, "");
-	if(transmitOngoing){
-		return;
+uint8_t getReceivedData(uint8_t buf[]){
+	//return if data is not ready yet or already retreived
+	if(transmitOngoing || bufIndex==0){
+		return TINYRF_ERR_NO_DATA;
 	}
-	//Serial.print("giving: ");Serial.println(rcvdBytes);
-	for(int i=0; i<MAX_MSG_LEN; i++){
-		buf[i] = rcvdBytes[i];
-		rcvdBytes[i] = '\0';
+	//copy the data
+	int dataLen = rcvdBytes[0];
+	for(int i=0; i<dataLen; i++){
+		buf[i] = rcvdBytes[i+1];
 	}
+	//calculate crc
+	byte crcRcvd = rcvdBytes[dataLen+1];
+	byte crcCalc = crc8(buf, dataLen);
+	if(crcRcvd != crcCalc){
+		return TINYRF_ERR_BAD_CRC;
+	}
+
 	bufIndex = 0;
+	return TINYRF_ERR_SUCCESS;
 }
 
