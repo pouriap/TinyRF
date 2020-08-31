@@ -86,6 +86,7 @@ void interrupt_routine(){
 	){
 		transmitOngoing = true;
 		pulse_count = 0;
+		bufIndex = 0;
 	}
 	else if(transmitOngoing){
 		rcvdPulses[pulse_count] = pulseDuration;
