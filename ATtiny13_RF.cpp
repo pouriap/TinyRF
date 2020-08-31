@@ -31,9 +31,9 @@ const int TRIGER_ERROR = 50;
 */
 
 volatile bool transmitOngoing = false;
-const int MAX_MSG_LEN = 16;
+const int MAX_MSG_LEN = 128;
 volatile uint8_t bufIndex = 0;
-char rcvdBytes[MAX_MSG_LEN];
+byte rcvdBytes[MAX_MSG_LEN];
 volatile unsigned long rcvdPulses[8];
 
 
@@ -41,7 +41,7 @@ volatile unsigned long rcvdPulses[8];
  * data: array of bytes
  * len: array size / number of bytes
 **/
-uint8_t checksum8(uint8_t data[], uint8_t len){
+byte checksum8(byte data[], uint8_t len){
 	uint16_t sum = 0;
 	// Compute the sum.  Let overflows accumulate in upper 8 bits.
 	for(uint8_t i=0; i<len; i++){
@@ -55,12 +55,12 @@ uint8_t checksum8(uint8_t data[], uint8_t len){
 	//Serial.print("sum after carry: ");Serial.print(sum);Serial.print(" 0x");Serial.println(sum, HEX);
 
 	// Return the 1s complement sum in finalsum
-	return (uint8_t) ~sum;
+	return (byte) ~sum;
 }
 
 //CRC-8 - based on the CRC8 formulas by Dallas/Maxim
 //code released under the therms of the GNU GPL 3.0 license
-uint8_t crc8(uint8_t data[], uint8_t len){
+byte crc8(byte data[], uint8_t len){
 	byte crc = 0x00;
 	while (len--)
 	{
@@ -85,7 +85,7 @@ void enableReceive(uint8_t pin){
 }
 
 bool process_received_byte(){
-	uint8_t receivedData = 0x00;
+	byte receivedData = 0x00;
 	for(int i=0; i<8; i++){
 		//if pulse is greater than START_PULSE_DURATION then we will not be here
 		if( rcvdPulses[i] > (ONE_PULSE_DURATION - TRIGER_ERROR) ){
@@ -142,7 +142,7 @@ void interrupt_routine(){
 }
 
 
-void send(char* data, uint8_t len, uint8_t pin){
+void send(byte* data, uint8_t len, uint8_t pin){
 
 	//premeable
 	//for(uint8_t i=0; i<64; i++){
@@ -151,7 +151,7 @@ void send(char* data, uint8_t len, uint8_t pin){
 	//	digitalWrite(pin, HIGH);
 	//	delayMicroseconds(1000);
 	//}
-	for(int i=0; i<4; i++){
+	for(uint8_t i=0; i<4; i++){
 		transmitByte(0x51, pin);
 	}
 
@@ -170,14 +170,14 @@ void send(char* data, uint8_t len, uint8_t pin){
 	}
 
 	///crc
-	uint8_t crc = crc8(data, len);
+	byte crc = crc8(data, len);
 	transmitByte(crc, pin);
 }
 
-void transmitByte(char byte, uint8_t pin){
+void transmitByte(byte _byte, uint8_t pin){
 	for(uint8_t i=0; i<8; i++){
 		//if 1
-		if(byte & (1<<i)){
+		if(_byte & (1<<i)){
 			digitalWrite(pin, LOW);
 			delayMicroseconds(ONE_PULSE_DURATION - HIGH_PERIOD_DURATION);
 			digitalWrite(pin, HIGH);
@@ -193,7 +193,7 @@ void transmitByte(char byte, uint8_t pin){
 	}
 }
 
-uint8_t getReceivedData(uint8_t buf[]){
+byte getReceivedData(byte buf[]){
 	//return if data is not ready yet or already retreived
 	if(transmitOngoing || bufIndex==0){
 		return TINYRF_ERR_NO_DATA;
