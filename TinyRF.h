@@ -15,25 +15,27 @@ const uint8_t MAX_MSG_LEN = 255;
 //increase this if you decrease pulse durations
 //in my experience I needed ~30ms of preamble, Internet suggests much shorter times tho
 const uint8_t NUM_PREAMBLE_BYTES = 4;
-/*
+const uint8_t PREABMLE_DURATION = 30;
 
+/* 
 //super long
 const unsigned int START_PULSE_DURATION = 8000;
 const unsigned int ONE_PULSE_DURATION = 5000;
 const unsigned int ZERO_PULSE_DURATION = 3000;
 const unsigned int HIGH_PERIOD_DURATION = 2000;
 const int TRIGER_ERROR = 50;
-*/
+const int START_PULSE_MAX_ERROR = 400; 
+ */
 
-
+/*
 //good
 const unsigned int START_PULSE_DURATION = 6000;
 const unsigned int ONE_PULSE_DURATION = 4000;
 const unsigned int ZERO_PULSE_DURATION = 3000;
 const unsigned int HIGH_PERIOD_DURATION = 2000;
 const int TRIGER_ERROR = 50;
-const int START_PULSE_MAX_ERROR = 500;
-
+const int START_PULSE_MAX_ERROR = 400; 
+*/
 
 /*
 //fast
@@ -47,14 +49,13 @@ const int START_PULSE_MAX_ERROR = 400;
 
 
 //super fast
-/*
 const unsigned int START_PULSE_DURATION = 2000;
 const unsigned int ONE_PULSE_DURATION = 1000;
 const unsigned int ZERO_PULSE_DURATION = 800;
 const unsigned int HIGH_PERIOD_DURATION = 500;
 const int TRIGER_ERROR = 50;
-const int START_PULSE_MAX_ERROR = 400; 
-*/
+const int START_PULSE_MAX_ERROR = 400;
+
 
 
 //Function declarations

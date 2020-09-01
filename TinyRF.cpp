@@ -1,13 +1,20 @@
 #include "Arduino.h"
 #include "TinyRF.h"
 
+
 //todo: sometimes resets
 //todo: sometimes there are many missed transmissions
+//todo: everything is ruined when we change preamble even a little bit
+//todo: higher speeds that should be totally possible are ruined, possibly related to above
+//todo: do we need higher max error for start pulse?
+//todo: when we set maximum for 1 and 0 pulses they get ruined
+
 
 volatile bool transmitOngoing = false;
 volatile uint8_t bufIndex = 0;
 byte rcvdBytes[MAX_MSG_LEN];
 volatile unsigned long rcvdPulses[8];
+
 
 //one bytes 1-s compliment checksum, supposedly the algorithm used in TCP
 byte checksum8(byte data[], uint8_t len){
@@ -50,15 +57,22 @@ bool process_received_byte(){
 	byte receivedData = 0x00;
 	for(uint8_t i=0; i<8; i++){
 		//if pulse is greater than START_PULSE_DURATION then we will not be here
-		if( rcvdPulses[i] > (ONE_PULSE_DURATION - TRIGER_ERROR) ){
+		if( 
+			rcvdPulses[i] > (ONE_PULSE_DURATION - TRIGER_ERROR)
+			//&& rcvdPulses[i] < (ONE_PULSE_DURATION + TRIGER_ERROR)
+		){
 			receivedData |= (1<<i);
 		}
-		else if( rcvdPulses[i] < (ZERO_PULSE_DURATION - TRIGER_ERROR) ){
+		else if( 
+			rcvdPulses[i] < (ZERO_PULSE_DURATION - TRIGER_ERROR)
+			//|| rcvdPulses[i] > (ZERO_PULSE_DURATION + TRIGER_ERROR)
+		){
 			//this is noise
 			return false;
 		}
 	}
 	if(bufIndex >= MAX_MSG_LEN){
+		//todo: do we have to do anything else if there's a buffer overflow?
 		Serial.println("BUFFER OVERFLOW");
 		bufIndex = 0;
 		return false;
@@ -89,6 +103,7 @@ void interrupt_routine(){
 		bufIndex = 0;
 	}
 	else if(transmitOngoing){
+		//Serial.println(pulseDuration);
 		rcvdPulses[pulse_count] = pulseDuration;
 		pulse_count++;
 	}
@@ -103,7 +118,16 @@ void interrupt_routine(){
 
 }
 
-
+/**
+ * Notes:
+ * Using digitalWrite() and delayMicroseconds() we will have frequent 8-12us timing errors errors
+ * Using native AVR code (PORTx/_delay_us) will decrease the error rate to frequent 4us errors
+ * Disabling interrupts during transmission + native AVR reduces errors to occasional 4us errors
+ * With our 200+us timings even a 50us error is forgiveable so we'll just stick with digitalWrite()
+ * Regarding ROM usage, it appears MicroCore's attiny13 optimizer already does the convertsion
+ * and in my tests there was no difference between using digitalWrite() and native code
+**/
+//todo: reduce this function's size
 void send(byte* data, uint8_t len, uint8_t pin){
 
 	//we calculate the crc here, because if we do it after the transmission has started 
@@ -111,8 +135,11 @@ void send(byte* data, uint8_t len, uint8_t pin){
 	byte crc = crc8(data, len);
 
 	//preamble
-	for(uint8_t i=0; i<NUM_PREAMBLE_BYTES; i++){
-		transmitByte(0x51, pin);
+	for(int i=0; i<PREABMLE_DURATION; i++){
+		digitalWrite(pin, LOW);
+		delayMicroseconds(400);
+		digitalWrite(pin, HIGH);
+		delayMicroseconds(600);
 	}
 
 	//start pulse
@@ -132,7 +159,14 @@ void send(byte* data, uint8_t len, uint8_t pin){
 	///crc
 	transmitByte(crc, pin);
 
-	//reset the line to LOW because receiver uses falling edges to detect pulses
+	//reset the line to LOW so receiver detects last pulse
+	//because receiver uses falling edges to detect pulses
+	digitalWrite(pin, LOW);
+	//receiver relies on noise to detect end of transmission, 
+	//so we send it something meaningless to "announce end of transmission"
+	delayMicroseconds(50);
+	digitalWrite(pin, HIGH);
+	delayMicroseconds(50);
 	digitalWrite(pin, LOW);
 
 }
@@ -151,6 +185,24 @@ void transmitByte(byte _byte, uint8_t pin){
 			delayMicroseconds(ZERO_PULSE_DURATION - HIGH_PERIOD_DURATION);
 			digitalWrite(pin, HIGH);
 			delayMicroseconds(HIGH_PERIOD_DURATION - 4);
+		}
+	}
+}
+
+void transmitByte2(byte _byte, uint8_t pin){
+	for(uint8_t i=0; i<8; i++){
+		//if 1
+		if(_byte & (1<<i)){
+			PORTB &= ~(1<<PB0);
+			_delay_us(ONE_PULSE_DURATION - HIGH_PERIOD_DURATION);
+			PORTB |= (1<<PB0);
+			_delay_us(HIGH_PERIOD_DURATION - 4);
+		}
+		else{
+			PORTB &= ~(1<<PB0);
+			_delay_us(ZERO_PULSE_DURATION - HIGH_PERIOD_DURATION);
+			PORTB |= (1<<PB0);
+			_delay_us(HIGH_PERIOD_DURATION - 4);
 		}
 	}
 }
