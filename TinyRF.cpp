@@ -1,5 +1,5 @@
 #include "Arduino.h"
-#include "ATtiny13_RF.h"
+#include "TinyRF.h"
 
 //todo: sometimes resets
 //todo: sometimes there are many missed transmissions

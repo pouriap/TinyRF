@@ -1,5 +1,5 @@
-#ifndef ATTTINY13_RF_H
-#define ATTTINY13_RF_H
+#ifndef TINYRF_H
+#define TINYRF_H
 
 #include "Arduino.h"
 
@@ -66,4 +66,4 @@ void send(byte data[], uint8_t len, uint8_t pin);
 void transmitByte(byte _byte, uint8_t pin);
 byte getReceivedData(byte buf[]);
 
-#endif  /* ATTTINY13_RF_H */ 
+#endif  /* TINYRF_H */ 
