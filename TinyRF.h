@@ -27,7 +27,7 @@ const int TRIGER_ERROR = 50;
 const int START_PULSE_MAX_ERROR = 400; 
  */
 
-/*
+
 //good
 const unsigned int START_PULSE_DURATION = 6000;
 const unsigned int ONE_PULSE_DURATION = 4000;
@@ -35,7 +35,7 @@ const unsigned int ZERO_PULSE_DURATION = 3000;
 const unsigned int HIGH_PERIOD_DURATION = 2000;
 const int TRIGER_ERROR = 50;
 const int START_PULSE_MAX_ERROR = 400; 
-*/
+
 
 /*
 //fast
@@ -47,7 +47,7 @@ const int TRIGER_ERROR = 50;
 const int START_PULSE_MAX_ERROR = 400; 
 */
 
-
+/* 
 //super fast
 const unsigned int START_PULSE_DURATION = 2000;
 const unsigned int ONE_PULSE_DURATION = 1000;
@@ -55,7 +55,7 @@ const unsigned int ZERO_PULSE_DURATION = 800;
 const unsigned int HIGH_PERIOD_DURATION = 500;
 const int TRIGER_ERROR = 50;
 const int START_PULSE_MAX_ERROR = 400;
-
+ */
 
 
 //Function declarations

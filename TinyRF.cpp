@@ -12,8 +12,14 @@
 
 volatile bool transmitOngoing = false;
 volatile uint8_t bufIndex = 0;
-byte rcvdBytes[MAX_MSG_LEN];
+//byte rcvdBytsBuf[MAX_MSG_LEN];
+int rcvdBytsBuf[256];
 volatile unsigned long rcvdPulses[8];
+volatile uint8_t numMsgsInBuffer = 0;
+volatile uint8_t msgAddrInBuf = 0;
+volatile uint8_t msgLen = 0;
+uint8_t bufferReadIndex = 0;
+
 
 
 //one bytes 1-s compliment checksum, supposedly the algorithm used in TCP
@@ -50,10 +56,13 @@ byte crc8(byte data[], uint8_t len){
 }
 
 void enableReceive(uint8_t pin){
+	for(int i=0; i<256; i++){
+		rcvdBytsBuf[i] = -1;
+	}
 	attachInterrupt(digitalPinToInterrupt(pin), interrupt_routine, FALLING);
 }
 
-bool process_received_byte(){
+inline bool process_received_byte(){
 	byte receivedData = 0x00;
 	for(uint8_t i=0; i<8; i++){
 		//if pulse is greater than START_PULSE_DURATION then we will not be here
@@ -67,30 +76,48 @@ bool process_received_byte(){
 			rcvdPulses[i] < (ZERO_PULSE_DURATION - TRIGER_ERROR)
 			//|| rcvdPulses[i] > (ZERO_PULSE_DURATION + TRIGER_ERROR)
 		){
-			//this is noise
+			//this is noise = end of transmission
+			transmitOngoing = false;
+			if(msgLen>0){
+				rcvdBytsBuf[msgAddrInBuf] = msgLen;
+				numMsgsInBuffer++;
+				//if a message's length is 0, then this block will not run and bufIndex will stay
+				//the same and next msg will be written over it
+				bufIndex++;
+			}
+
+			//if(msgLen>10){
+			//	Serial.print("message len is: ");Serial.println(msgLen);
+			//}
+
+			//for(int i=0; i<MAX_MSG_LEN; i++){
+			//	Serial.print(rcvdBytsBuf[i]);Serial.print(",");
+			//}
+			//Serial.println("");
+
+
 			return false;
 		}
 	}
-	if(bufIndex >= MAX_MSG_LEN){
-		//todo: do we have to do anything else if there's a buffer overflow?
-		Serial.println("BUFFER OVERFLOW");
-		bufIndex = 0;
-		return false;
-	}
-	else{
-		rcvdBytes[bufIndex++] = receivedData;
-		return true;
-	}
+
+	rcvdBytsBuf[++bufIndex] = receivedData;
+	msgLen++;
+	return true;
+
 }
 
+//this interrupt routine usually take 8us - sometimes goes up to 30us
+//with our 100+us pulse durations this shouldn't be a problem
 void interrupt_routine(){
 
 	static unsigned long lastTime = 0;
-	static unsigned int pulse_count = 0;
+	static uint8_t pulse_count = 0;
 
 	unsigned long time = micros();
 	unsigned long pulseDuration = time - lastTime;
 	lastTime = time;
+
+	//Serial.println(pulseDuration);
 	
 	//start of transmission
 	//we also check the maximum duration for start pulse so that our start detection will be more accurate 
@@ -98,9 +125,25 @@ void interrupt_routine(){
 		pulseDuration > (START_PULSE_DURATION - TRIGER_ERROR)
 		&& pulseDuration < (START_PULSE_DURATION + START_PULSE_MAX_ERROR)
 	){
+		//if we receive a start while we are already processing an ongoing transmission
+		//we add the length of the previous message before starting to process this one
+		//this prevents a curropted buffer where length will be zero because transmission was
+		//never finished, and after that zero there will be some bytes that the getReceivedData()
+		//will treat as length
+		//todo: or perhaps we should just ignore these messages because they're useless
+		if(transmitOngoing){
+			rcvdBytsBuf[msgAddrInBuf] = msgLen;
+			numMsgsInBuffer++;
+			//if a message's length is 0, then this block will not run and bufIndex will stay
+			//the same and next msg will be written over it
+			bufIndex++;
+		}
+		//Serial.println("start");
 		transmitOngoing = true;
 		pulse_count = 0;
-		bufIndex = 0;
+		msgAddrInBuf = bufIndex;
+		//bufIndex++;
+		msgLen = 0;
 	}
 	else if(transmitOngoing){
 		//Serial.println(pulseDuration);
@@ -110,11 +153,11 @@ void interrupt_routine(){
 
 	if(pulse_count == 8){
 		//reset if received bad byte (i.e noise = end of transmission)
-		if(!process_received_byte()){
-			transmitOngoing = false;
-		}
+		process_received_byte();
 		pulse_count = 0;
 	}
+
+	//Serial.println(micros() - time);
 
 }
 
@@ -149,7 +192,7 @@ void send(byte* data, uint8_t len, uint8_t pin){
 	delayMicroseconds(HIGH_PERIOD_DURATION - 4);	//-4 because digitalWrite takes ~4us
 
 	//length
-	transmitByte(len, pin);
+	//transmitByte(len, pin);
 
 	//data
 	for(uint8_t i=0; i<len; i++){
@@ -171,7 +214,64 @@ void send(byte* data, uint8_t len, uint8_t pin){
 
 }
 
-void transmitByte(byte _byte, uint8_t pin){
+void sendBad(byte* data, uint8_t len, uint8_t pin){
+
+	//we calculate the crc here, because if we do it after the transmission has started 
+	//it will create a delay during transmission which causes the receiver to lose accuracy
+	byte crc = crc8(data, len);
+
+	//preamble
+	for(int i=0; i<PREABMLE_DURATION; i++){
+		digitalWrite(pin, LOW);
+		delayMicroseconds(400);
+		digitalWrite(pin, HIGH);
+		delayMicroseconds(600);
+	}
+
+	//start pulse
+	digitalWrite(pin, LOW);
+	delayMicroseconds(START_PULSE_DURATION - HIGH_PERIOD_DURATION);
+	digitalWrite(pin, HIGH);
+	delayMicroseconds(HIGH_PERIOD_DURATION - 4);	//-4 because digitalWrite takes ~4us
+
+	//length
+	//transmitByte(len, pin);
+
+	//data
+	for(uint8_t i=0; i<3; i++){
+		transmitByte(data[i], pin);
+	}
+	digitalWrite(pin, LOW);
+	delayMicroseconds(10);
+
+	//start pulse
+	digitalWrite(pin, LOW);
+	delayMicroseconds(START_PULSE_DURATION - HIGH_PERIOD_DURATION);
+	digitalWrite(pin, HIGH);
+	delayMicroseconds(HIGH_PERIOD_DURATION - 4);	//-4 because digitalWrite takes ~4us
+
+	//data
+	for(uint8_t i=0; i<len; i++){
+		transmitByte(data[i], pin);
+	}
+
+
+	///crc
+	transmitByte(crc, pin);
+
+	//reset the line to LOW so receiver detects last pulse
+	//because receiver uses falling edges to detect pulses
+	digitalWrite(pin, LOW);
+	//receiver relies on noise to detect end of transmission, 
+	//so we send it something meaningless to "announce end of transmission"
+	delayMicroseconds(50);
+	digitalWrite(pin, HIGH);
+	delayMicroseconds(50);
+	digitalWrite(pin, LOW);
+
+}
+
+void transmitByte2(byte _byte, uint8_t pin){
 	for(uint8_t i=0; i<8; i++){
 		//if 1
 		if(_byte & (1<<i)){
@@ -189,7 +289,8 @@ void transmitByte(byte _byte, uint8_t pin){
 	}
 }
 
-void transmitByte2(byte _byte, uint8_t pin){
+void transmitByte(byte _byte, uint8_t pin){
+	cli();
 	for(uint8_t i=0; i<8; i++){
 		//if 1
 		if(_byte & (1<<i)){
@@ -205,32 +306,60 @@ void transmitByte2(byte _byte, uint8_t pin){
 			_delay_us(HIGH_PERIOD_DURATION - 4);
 		}
 	}
+	sei();
 }
 
 byte getReceivedData(byte buf[]){
 
-	//return if data is not ready yet or already retreived
-	if(transmitOngoing || bufIndex==0){
+	if(numMsgsInBuffer == 0){
 		return TINYRF_ERR_NO_DATA;
 	}
 
-	//copy the data
-	uint8_t dataLen = rcvdBytes[0];
-	for(int i=0; i<dataLen; i++){
-		buf[i] = rcvdBytes[i+1];
+	//Serial.print("len addr: ");Serial.print(bufferReadIndex, DEC);
+	//Serial.print(" - #msgs in buf: ");Serial.print(numMsgsInBuffer);
+
+	//strcpy(buf, "");
+
+	//manage buffer
+	uint8_t dataLen = rcvdBytsBuf[bufferReadIndex];
+	//bufferReadIndex += dataLen + 1;
+	bufferReadIndex++; //khode bufferReadIndex length ast
+	numMsgsInBuffer--;
+
+	if(dataLen == 0){
+		return TINYRF_ERR_NO_DATA;
 	}
 
-	//we got the data so reset the index
-	bufIndex = 0;
+	//Serial.print(" - read index: ");Serial.print(bufferReadIndex, DEC);
+	//Serial.print(" - len: ");Serial.print(dataLen);
+	//Serial.println("");
+	//for(int i=0; i<256; i++){
+	//	Serial.print(rcvdBytsBuf[i]);Serial.print(",");
+	//}
+	//Serial.println("");
+
+	//copy the data
+	for(int i=0; i<dataLen-1; i++){
+		buf[i] = rcvdBytsBuf[bufferReadIndex + i];
+	}
 
 	//calculate crc
-	byte crcRcvd = rcvdBytes[dataLen+1];
-	byte crcCalc = crc8(buf, dataLen);
+	byte crcRcvd = rcvdBytsBuf[bufferReadIndex -1 +dataLen];
+	byte crcCalc = crc8(buf, dataLen-1);
+	//we want the read index to reset back to zero so we do this
+	//todo: this is highly inefficient, just check if it gets bigger than 255 and set accordingly
+	for(int i=0; i<dataLen; i++){
+		bufferReadIndex++;
+	}
+
+	//Serial.print("bufferReadIndex is now: ");Serial.println(bufferReadIndex, DEC);
+
 	if(crcRcvd != crcCalc){
 		Serial.print("BAD CRC: [");Serial.print((char*)buf);Serial.println("]");
 		Serial.print("crcRcvd: ");Serial.print(crcRcvd, HEX);Serial.print(" crcCalc: ");Serial.print(crcCalc, HEX);Serial.print(" len: ");Serial.println(dataLen);
 		return TINYRF_ERR_BAD_CRC;
 	}
+
 
 	return TINYRF_ERR_SUCCESS;
 
