@@ -2,8 +2,6 @@
 #include "TinyRF.h"
 
 
-//todo: sometimes resets
-//todo: sometimes there are many missed transmissions
 //todo: everything is ruined when we change preamble even a little bit
 //todo: higher speeds that should be totally possible are ruined, possibly related to above
 //todo: do we need higher max error for start pulse?
@@ -12,8 +10,7 @@
 
 volatile bool transmitOngoing = false;
 volatile uint8_t bufIndex = 0;
-//byte rcvdBytsBuf[MAX_MSG_LEN];
-int rcvdBytsBuf[256];
+byte rcvdBytsBuf[RX_BUFFER_SIZE];
 volatile unsigned long rcvdPulses[8];
 volatile uint8_t numMsgsInBuffer = 0;
 volatile uint8_t msgAddrInBuf = 0;
@@ -56,9 +53,6 @@ byte crc8(byte data[], uint8_t len){
 }
 
 void enableReceive(uint8_t pin){
-	for(int i=0; i<256; i++){
-		rcvdBytsBuf[i] = -1;
-	}
 	attachInterrupt(digitalPinToInterrupt(pin), interrupt_routine, FALLING);
 }
 
@@ -78,6 +72,9 @@ inline bool process_received_byte(){
 		){
 			//this is noise = end of transmission
 			transmitOngoing = false;
+
+			//Serial.println("");
+
 			if(msgLen>0){
 				rcvdBytsBuf[msgAddrInBuf] = msgLen;
 				numMsgsInBuffer++;
@@ -86,19 +83,11 @@ inline bool process_received_byte(){
 				bufIndex++;
 			}
 
-			//if(msgLen>10){
-			//	Serial.print("message len is: ");Serial.println(msgLen);
-			//}
-
-			//for(int i=0; i<MAX_MSG_LEN; i++){
-			//	Serial.print(rcvdBytsBuf[i]);Serial.print(",");
-			//}
-			//Serial.println("");
-
-
 			return false;
 		}
 	}
+
+	//Serial.print((char)receivedData);
 
 	rcvdBytsBuf[++bufIndex] = receivedData;
 	msgLen++;
@@ -138,15 +127,12 @@ void interrupt_routine(){
 			//the same and next msg will be written over it
 			bufIndex++;
 		}
-		//Serial.println("start");
 		transmitOngoing = true;
 		pulse_count = 0;
 		msgAddrInBuf = bufIndex;
-		//bufIndex++;
 		msgLen = 0;
 	}
 	else if(transmitOngoing){
-		//Serial.println(pulseDuration);
 		rcvdPulses[pulse_count] = pulseDuration;
 		pulse_count++;
 	}
@@ -191,9 +177,6 @@ void send(byte* data, uint8_t len, uint8_t pin){
 	digitalWrite(pin, HIGH);
 	delayMicroseconds(HIGH_PERIOD_DURATION - 4);	//-4 because digitalWrite takes ~4us
 
-	//length
-	//transmitByte(len, pin);
-
 	//data
 	for(uint8_t i=0; i<len; i++){
 		transmitByte(data[i], pin);
@@ -234,9 +217,6 @@ void sendBad(byte* data, uint8_t len, uint8_t pin){
 	digitalWrite(pin, HIGH);
 	delayMicroseconds(HIGH_PERIOD_DURATION - 4);	//-4 because digitalWrite takes ~4us
 
-	//length
-	//transmitByte(len, pin);
-
 	//data
 	for(uint8_t i=0; i<3; i++){
 		transmitByte(data[i], pin);
@@ -255,7 +235,6 @@ void sendBad(byte* data, uint8_t len, uint8_t pin){
 		transmitByte(data[i], pin);
 	}
 
-
 	///crc
 	transmitByte(crc, pin);
 
@@ -271,7 +250,7 @@ void sendBad(byte* data, uint8_t len, uint8_t pin){
 
 }
 
-void transmitByte2(byte _byte, uint8_t pin){
+void transmitByte(byte _byte, uint8_t pin){
 	for(uint8_t i=0; i<8; i++){
 		//if 1
 		if(_byte & (1<<i)){
@@ -289,7 +268,7 @@ void transmitByte2(byte _byte, uint8_t pin){
 	}
 }
 
-void transmitByte(byte _byte, uint8_t pin){
+void transmitByte2(byte _byte, uint8_t pin){
 	cli();
 	for(uint8_t i=0; i<8; i++){
 		//if 1
@@ -318,39 +297,41 @@ byte getReceivedData(byte buf[]){
 	//Serial.print("len addr: ");Serial.print(bufferReadIndex, DEC);
 	//Serial.print(" - #msgs in buf: ");Serial.print(numMsgsInBuffer);
 
-	//strcpy(buf, "");
-
-	//manage buffer
-	uint8_t dataLen = rcvdBytsBuf[bufferReadIndex];
-	//bufferReadIndex += dataLen + 1;
-	bufferReadIndex++; //khode bufferReadIndex length ast
+	/* manage buffer */
+	//message length = data length + crc byte
+	//bufferReadIndex points to the first byte of message, i.e. the length
+	uint8_t msgLen = rcvdBytsBuf[bufferReadIndex];
+	//move buffer pointer one byte further
+	//after this bufferReadIndex points to the first byte of the actual data
+	bufferReadIndex++;
+	//we consider this message processed as of now
 	numMsgsInBuffer--;
-
-	if(dataLen == 0){
+	//if message's length is zero then we don't need to do anything more
+	if(msgLen == 0){
 		return TINYRF_ERR_NO_DATA;
 	}
 
+	//dataLen is the actual data, i.e. minus the CRC
+	uint8_t dataLen = msgLen - 1;
+
 	//Serial.print(" - read index: ");Serial.print(bufferReadIndex, DEC);
-	//Serial.print(" - len: ");Serial.print(dataLen);
+	//Serial.print(" - len: ");Serial.print(msgLen);
 	//Serial.println("");
 	//for(int i=0; i<256; i++){
 	//	Serial.print(rcvdBytsBuf[i]);Serial.print(",");
 	//}
 	//Serial.println("");
 
-	//copy the data
-	for(int i=0; i<dataLen-1; i++){
-		buf[i] = rcvdBytsBuf[bufferReadIndex + i];
+	//copy the data from 'bufferReadIndex' until bufferReadIndex+dataLen
+	for(int i=0; i<dataLen; i++){
+		buf[i] = rcvdBytsBuf[bufferReadIndex++];
 	}
 
-	//calculate crc
-	byte crcRcvd = rcvdBytsBuf[bufferReadIndex -1 +dataLen];
-	byte crcCalc = crc8(buf, dataLen-1);
-	//we want the read index to reset back to zero so we do this
-	//todo: this is highly inefficient, just check if it gets bigger than 255 and set accordingly
-	for(int i=0; i<dataLen; i++){
-		bufferReadIndex++;
-	}
+	//crc
+	byte crcRcvd = rcvdBytsBuf[bufferReadIndex];
+	//go to next byte
+	bufferReadIndex++;
+	byte crcCalc = crc8(buf, dataLen);
 
 	//Serial.print("bufferReadIndex is now: ");Serial.println(bufferReadIndex, DEC);
 
@@ -359,7 +340,6 @@ byte getReceivedData(byte buf[]){
 		Serial.print("crcRcvd: ");Serial.print(crcRcvd, HEX);Serial.print(" crcCalc: ");Serial.print(crcCalc, HEX);Serial.print(" len: ");Serial.println(dataLen);
 		return TINYRF_ERR_BAD_CRC;
 	}
-
 
 	return TINYRF_ERR_SUCCESS;
 
