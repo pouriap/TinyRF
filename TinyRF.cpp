@@ -6,6 +6,14 @@
 //todo: higher speeds that should be totally possible are ruined, possibly related to above
 //todo: do we need higher max error for start pulse?
 //todo: when we set maximum for 1 and 0 pulses they get ruined
+//todo: change pulse duration to pulse period
+
+/*
+notes:
+- if we had errors when increasing data rates it's because of noise and we should enable MAX values for
+pulse durations to increase accuracy
+- if we had errors when decreasing data rates it's because of preable 
+*/
 
 
 volatile bool transmitOngoing = false;
@@ -62,13 +70,13 @@ inline bool process_received_byte(){
 		//if pulse is greater than START_PULSE_DURATION then we will not be here
 		if( 
 			rcvdPulses[i] > (ONE_PULSE_DURATION - TRIGER_ERROR)
-			//&& rcvdPulses[i] < (ONE_PULSE_DURATION + TRIGER_ERROR)
+			&& rcvdPulses[i] < (ONE_PULSE_DURATION + TRIGER_ERROR)
 		){
 			receivedData |= (1<<i);
 		}
 		else if( 
 			rcvdPulses[i] < (ZERO_PULSE_DURATION - TRIGER_ERROR)
-			//|| rcvdPulses[i] > (ZERO_PULSE_DURATION + TRIGER_ERROR)
+			|| rcvdPulses[i] > (ZERO_PULSE_DURATION + TRIGER_ERROR)
 		){
 			//this is noise = end of transmission
 			transmitOngoing = false;

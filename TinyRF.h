@@ -22,7 +22,7 @@ const uint8_t NUM_PREAMBLE_BYTES = 4;
 const uint8_t PREABMLE_DURATION = 30;
 
 
-#define good
+#define superfast
 
 #ifdef slow
 const unsigned int START_PULSE_DURATION = 8000;
@@ -56,8 +56,8 @@ const unsigned int START_PULSE_DURATION = 2000;
 const unsigned int ONE_PULSE_DURATION = 1000;
 const unsigned int ZERO_PULSE_DURATION = 800;
 const unsigned int HIGH_PERIOD_DURATION = 500;
-const int TRIGER_ERROR = 50;
-const int START_PULSE_MAX_ERROR = 400;
+const int TRIGER_ERROR = 30;
+const int START_PULSE_MAX_ERROR = 100;
 #endif
 
 
