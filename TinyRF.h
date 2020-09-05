@@ -18,11 +18,16 @@ const uint16_t RX_BUFFER_SIZE = 256;
 //preabmle to send before each transmission to get the receiver tuned
 //increase this if you decrease pulse durations
 //in my experience I needed ~30ms of preamble, Internet suggests much shorter times tho
-const uint8_t NUM_PREAMBLE_BYTES = 4;
 const uint8_t PREABMLE_DURATION = 30;
 
+//where should we do end of transmission check?
+//best place is in TX but if you have limited memory you can do it in RX but that will increase
+//error rate. alternatively you can just disable it using EOT_NONE.
+//#define EOT_IN_RX
+//#define EOT_NONE
 
-#define superfast
+
+#define lightning
 
 #ifdef slow
 const unsigned int START_PULSE_DURATION = 8000;
@@ -60,14 +65,24 @@ const int TRIGER_ERROR = 30;
 const int START_PULSE_MAX_ERROR = 100;
 #endif
 
+#ifdef lightning
+const unsigned int START_PULSE_DURATION = 2000;
+const unsigned int ONE_PULSE_DURATION = 400;
+const unsigned int ZERO_PULSE_DURATION = 300;
+const unsigned int HIGH_PERIOD_DURATION = 200;
+const int TRIGER_ERROR = 30;
+const int START_PULSE_MAX_ERROR = 100;
+#endif
+
 
 //Function declarations
 byte checksum8(byte data[], uint8_t len);
 byte crc8(byte data[], uint8_t len);
-void enableReceive(uint8_t portNumber);
+void setupReceiver(uint8_t pin);
+void setupTransmitter(uint8_t pin);
 void interrupt_routine();
-void send(byte data[], uint8_t len, uint8_t pin);
-void transmitByte(byte _byte, uint8_t pin);
+void send(byte data[], uint8_t len);
+void transmitByte(byte _byte);
 byte getReceivedData(byte buf[]);
 
 #endif  /* TINYRF_H */ 

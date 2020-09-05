@@ -1,7 +1,6 @@
 #include "Arduino.h"
 #include "TinyRF.h"
 
-
 //todo: everything is ruined when we change preamble even a little bit
 //todo: higher speeds that should be totally possible are ruined, possibly related to above
 //todo: do we need higher max error for start pulse?
@@ -12,7 +11,7 @@
 notes:
 - if we had errors when increasing data rates it's because of noise and we should enable MAX values for
 pulse durations to increase accuracy
-- if we had errors when decreasing data rates it's because of preable 
+- if we had errors when increasing gap between messages it's because of preable 
 */
 
 
@@ -24,6 +23,10 @@ volatile uint8_t numMsgsInBuffer = 0;
 volatile uint8_t msgAddrInBuf = 0;
 volatile uint8_t msgLen = 0;
 uint8_t bufferReadIndex = 0;
+volatile unsigned long lastTime = 0;
+uint8_t rxPin = 2;
+uint8_t txPin = 4;
+
 
 
 
@@ -60,8 +63,15 @@ byte crc8(byte data[], uint8_t len){
 	return crc;
 }
 
-void enableReceive(uint8_t pin){
-	attachInterrupt(digitalPinToInterrupt(pin), interrupt_routine, FALLING);
+void setupReceiver(uint8_t pin){
+	rxPin = pin;
+	pinMode(rxPin, INPUT);
+	attachInterrupt(digitalPinToInterrupt(rxPin), interrupt_routine, FALLING);
+}
+
+void setupTransmitter(uint8_t pin){
+	txPin = pin;
+	pinMode(txPin, OUTPUT);
 }
 
 inline bool process_received_byte(){
@@ -107,7 +117,6 @@ inline bool process_received_byte(){
 //with our 100+us pulse durations this shouldn't be a problem
 void interrupt_routine(){
 
-	static unsigned long lastTime = 0;
 	static uint8_t pulse_count = 0;
 
 	unsigned long time = micros();
@@ -147,6 +156,7 @@ void interrupt_routine(){
 
 	if(pulse_count == 8){
 		//reset if received bad byte (i.e noise = end of transmission)
+		//todo: this doesn't need return type
 		process_received_byte();
 		pulse_count = 0;
 	}
@@ -165,7 +175,7 @@ void interrupt_routine(){
  * and in my tests there was no difference between using digitalWrite() and native code
 **/
 //todo: reduce this function's size
-void send(byte* data, uint8_t len, uint8_t pin){
+void send(byte* data, uint8_t len){
 
 	//we calculate the crc here, because if we do it after the transmission has started 
 	//it will create a delay during transmission which causes the receiver to lose accuracy
@@ -173,110 +183,65 @@ void send(byte* data, uint8_t len, uint8_t pin){
 
 	//preamble
 	for(int i=0; i<PREABMLE_DURATION; i++){
-		digitalWrite(pin, LOW);
+		digitalWrite(txPin, LOW);
 		delayMicroseconds(400);
-		digitalWrite(pin, HIGH);
+		digitalWrite(txPin, HIGH);
 		delayMicroseconds(600);
 	}
 
 	//start pulse
-	digitalWrite(pin, LOW);
+	digitalWrite(txPin, LOW);
 	delayMicroseconds(START_PULSE_DURATION - HIGH_PERIOD_DURATION);
-	digitalWrite(pin, HIGH);
+	digitalWrite(txPin, HIGH);
 	delayMicroseconds(HIGH_PERIOD_DURATION - 4);	//-4 because digitalWrite takes ~4us
 
 	//data
 	for(uint8_t i=0; i<len; i++){
-		transmitByte(data[i], pin);
+		transmitByte(data[i]);
 	}
 
 	///crc
-	transmitByte(crc, pin);
+	transmitByte(crc);
 
 	//reset the line to LOW so receiver detects last pulse
 	//because receiver uses falling edges to detect pulses
-	digitalWrite(pin, LOW);
+	digitalWrite(txPin, LOW);
+	//delayMicroseconds(1000);
 	//receiver relies on noise to detect end of transmission, 
-	//so we send it something meaningless to "announce end of transmission"
-	delayMicroseconds(50);
-	digitalWrite(pin, HIGH);
-	delayMicroseconds(50);
-	digitalWrite(pin, LOW);
+	//so we send it some artificial noise to "announce" end of transmission
+	//be careful choosing this because when we're here receiver is expecting a byte not a start pulse
+	//so it's more sensitive
+	//we really need 8 to fill the rcvdPulses[] buffer, but we send 10 just to be sure
+#if !defined(EOT_IN_RX) && !defined(EOT_NONE)
+	for(uint8_t i=0; i<10; i++){
+		delayMicroseconds(HIGH_PERIOD_DURATION/2);
+		digitalWrite(txPin, HIGH);
+		delayMicroseconds(HIGH_PERIOD_DURATION/2);
+		digitalWrite(txPin, LOW);
+	}
+#endif
 
 }
 
-void sendBad(byte* data, uint8_t len, uint8_t pin){
-
-	//we calculate the crc here, because if we do it after the transmission has started 
-	//it will create a delay during transmission which causes the receiver to lose accuracy
-	byte crc = crc8(data, len);
-
-	//preamble
-	for(int i=0; i<PREABMLE_DURATION; i++){
-		digitalWrite(pin, LOW);
-		delayMicroseconds(400);
-		digitalWrite(pin, HIGH);
-		delayMicroseconds(600);
-	}
-
-	//start pulse
-	digitalWrite(pin, LOW);
-	delayMicroseconds(START_PULSE_DURATION - HIGH_PERIOD_DURATION);
-	digitalWrite(pin, HIGH);
-	delayMicroseconds(HIGH_PERIOD_DURATION - 4);	//-4 because digitalWrite takes ~4us
-
-	//data
-	for(uint8_t i=0; i<3; i++){
-		transmitByte(data[i], pin);
-	}
-	digitalWrite(pin, LOW);
-	delayMicroseconds(10);
-
-	//start pulse
-	digitalWrite(pin, LOW);
-	delayMicroseconds(START_PULSE_DURATION - HIGH_PERIOD_DURATION);
-	digitalWrite(pin, HIGH);
-	delayMicroseconds(HIGH_PERIOD_DURATION - 4);	//-4 because digitalWrite takes ~4us
-
-	//data
-	for(uint8_t i=0; i<len; i++){
-		transmitByte(data[i], pin);
-	}
-
-	///crc
-	transmitByte(crc, pin);
-
-	//reset the line to LOW so receiver detects last pulse
-	//because receiver uses falling edges to detect pulses
-	digitalWrite(pin, LOW);
-	//receiver relies on noise to detect end of transmission, 
-	//so we send it something meaningless to "announce end of transmission"
-	delayMicroseconds(50);
-	digitalWrite(pin, HIGH);
-	delayMicroseconds(50);
-	digitalWrite(pin, LOW);
-
-}
-
-void transmitByte(byte _byte, uint8_t pin){
+void transmitByte(byte _byte){
 	for(uint8_t i=0; i<8; i++){
 		//if 1
 		if(_byte & (1<<i)){
-			digitalWrite(pin, LOW);
+			digitalWrite(txPin, LOW);
 			delayMicroseconds(ONE_PULSE_DURATION - HIGH_PERIOD_DURATION);
-			digitalWrite(pin, HIGH);
+			digitalWrite(txPin, HIGH);
 			delayMicroseconds(HIGH_PERIOD_DURATION - 4);
 		}
 		else{
-			digitalWrite(pin, LOW);
+			digitalWrite(txPin, LOW);
 			delayMicroseconds(ZERO_PULSE_DURATION - HIGH_PERIOD_DURATION);
-			digitalWrite(pin, HIGH);
+			digitalWrite(txPin, HIGH);
 			delayMicroseconds(HIGH_PERIOD_DURATION - 4);
 		}
 	}
 }
 
-void transmitByte2(byte _byte, uint8_t pin){
+void transmitByte2(byte _byte){
 	cli();
 	for(uint8_t i=0; i<8; i++){
 		//if 1
@@ -297,6 +262,26 @@ void transmitByte2(byte _byte, uint8_t pin){
 }
 
 byte getReceivedData(byte buf[]){
+
+	//we rely on noise to detect end of transmission
+	//in the rare event that there was no noise(the interrupt did not trigger) for a long time
+	//consider the transmission over and add received data to buffer
+#if defined(EOT_IN_RX) && !defined(EOT_NONE)
+	if(transmitOngoing){
+		//we need to detach the interrupt because lastTime is non-atomic
+		detachInterrupt(digitalPinToInterrupt(rxPin));
+		if( 
+			(msgLen > 0) && 
+			((micros() - lastTime) > START_PULSE_DURATION + START_PULSE_MAX_ERROR) 
+		){
+			transmitOngoing = false;
+			rcvdBytsBuf[msgAddrInBuf] = msgLen;
+			numMsgsInBuffer++;
+			bufIndex++;
+		}
+		attachInterrupt(digitalPinToInterrupt(rxPin), interrupt_routine, FALLING);
+	}
+#endif
 
 	if(numMsgsInBuffer == 0){
 		return TINYRF_ERR_NO_DATA;
