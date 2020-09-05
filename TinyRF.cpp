@@ -1,10 +1,7 @@
 #include "Arduino.h"
 #include "TinyRF.h"
 
-//todo: everything is ruined when we change preamble even a little bit
-//todo: higher speeds that should be totally possible are ruined, possibly related to above
-//todo: do we need higher max error for start pulse?
-//todo: when we set maximum for 1 and 0 pulses they get ruined
+//todo: receiver is very sensitive to preamble, and in higher data rates we need more preable
 //todo: change pulse duration to pulse period
 
 /*
@@ -184,9 +181,9 @@ void send(byte* data, uint8_t len){
 	//preamble
 	for(int i=0; i<PREABMLE_DURATION; i++){
 		digitalWrite(txPin, LOW);
-		delayMicroseconds(400);
+		delayMicroseconds(200);
 		digitalWrite(txPin, HIGH);
-		delayMicroseconds(600);
+		delayMicroseconds(800);
 	}
 
 	//start pulse

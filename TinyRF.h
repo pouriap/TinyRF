@@ -17,8 +17,9 @@ const uint8_t MAX_MSG_LEN = 255;
 const uint16_t RX_BUFFER_SIZE = 256;
 //preabmle to send before each transmission to get the receiver tuned
 //increase this if you decrease pulse durations
-//in my experience I needed ~30ms of preamble, Internet suggests much shorter times tho
-const uint8_t PREABMLE_DURATION = 30;
+//in my experiments I needed ~50ms of preamble (the faster the datarate the more preabmle needed)
+//however Internet suggests much shorter times, radiohead for example uses 36bits at 2000 baud rate = ~18ms
+const uint8_t PREABMLE_DURATION = 50;
 
 //where should we do end of transmission check?
 //best place is in TX but if you have limited memory you can do it in RX but that will increase
