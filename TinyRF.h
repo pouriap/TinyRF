@@ -12,7 +12,7 @@ const uint8_t MAX_MSG_LEN = 255;
 //where should we do end of transmission check?
 //best place is in TX but if you have limited memory you can do it in RX but that will increase
 //error rate. alternatively you can just disable it using EOT_NONE.
-//#define EOT_IN_RX
+#define EOT_IN_RX
 //#define EOT_NONE
 
 

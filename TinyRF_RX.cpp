@@ -1,6 +1,7 @@
 #include "TinyRF_RX.h"
 
 volatile bool transmitOngoing = false;
+volatile bool interruptRun = false;
 volatile uint8_t bufIndex = 0;
 byte rcvdBytsBuf[RX_BUFFER_SIZE];
 volatile unsigned long rcvdPulses[8];
@@ -62,6 +63,8 @@ inline bool process_received_byte(){
 //with our 100+us pulse durations this shouldn't be a problem
 void interrupt_routine(){
 
+	interruptRun = true;
+
 	static uint8_t pulse_count = 0;
 
 	unsigned long time = micros();
@@ -114,23 +117,29 @@ void interrupt_routine(){
 
 byte getReceivedData(byte buf[]){
 
+
 	//we rely on noise to detect end of transmission
 	//in the rare event that there was no noise(the interrupt did not trigger) for a long time
 	//consider the transmission over and add received data to buffer
 #if defined(EOT_IN_RX) && !defined(EOT_NONE)
-	if(transmitOngoing){
-		//we need to detach the interrupt because lastTime is non-atomic
-		detachInterrupt(digitalPinToInterrupt(rxPin));
-		if( 
-			(msgLen > 0) && 
-			((micros() - lastTime) > START_PULSE_DURATION + START_PULSE_MAX_ERROR) 
-		){
+	static unsigned long lastInterruptRun = 0;
+	unsigned long time = micros();
+	if(interruptRun){
+		lastInterruptRun = time;
+		interruptRun = false;
+	}
+	else if(transmitOngoing){
+		if( (time - lastInterruptRun) > (START_PULSE_DURATION*2) ){
+			//we don't want the interrupt to run while we're modifying these
+			//it's unlikely that this will hurt the interrupt because if it hasn't run for a while it means
+			//transmission has stopped. also this is quite short
+			detachInterrupt(digitalPinToInterrupt(rxPin));
 			transmitOngoing = false;
 			rcvdBytsBuf[msgAddrInBuf] = msgLen;
 			numMsgsInBuffer++;
 			bufIndex++;
+			attachInterrupt(digitalPinToInterrupt(rxPin), interrupt_routine, FALLING);
 		}
-		attachInterrupt(digitalPinToInterrupt(rxPin), interrupt_routine, FALLING);
 	}
 #endif
 
