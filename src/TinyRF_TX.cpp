@@ -63,18 +63,15 @@ void send(byte* data, uint8_t len){
 
 void transmitByte(byte _byte){
 	for(uint8_t i=0; i<8; i++){
+		digitalWrite(txPin, LOW);
 		//if 1
 		if(_byte & (1<<i)){
-			digitalWrite(txPin, LOW);
 			delayMicroseconds(ONE_PULSE_DURATION - HIGH_PERIOD_DURATION);
-			digitalWrite(txPin, HIGH);
-			delayMicroseconds(HIGH_PERIOD_DURATION - 4);
 		}
 		else{
-			digitalWrite(txPin, LOW);
 			delayMicroseconds(ZERO_PULSE_DURATION - HIGH_PERIOD_DURATION);
-			digitalWrite(txPin, HIGH);
-			delayMicroseconds(HIGH_PERIOD_DURATION - 4);
 		}
+		digitalWrite(txPin, HIGH);
+		delayMicroseconds(HIGH_PERIOD_DURATION - 4);
 	}
 }
