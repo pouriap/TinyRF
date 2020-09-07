@@ -21,11 +21,10 @@ void send(byte* data, uint8_t len){
 	byte crc = crc8(data, len);
 
 	//preamble
-	for(uint8_t i=0; i<PREABMLE_DURATION; i++){
-		digitalWrite(txPin, LOW);
-		delayMicroseconds(200);
-		digitalWrite(txPin, HIGH);
-		delayMicroseconds(800);
+	//based on our pulse period our zeroes have more HIGH time than our ones
+	//so we send zero bytes as preamble
+	for(uint8_t i=0; i<NUM_PREAMBLE_BYTES; i++){
+		transmitByte(0x00);
 	}
 
 	//start pulse

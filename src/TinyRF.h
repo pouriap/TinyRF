@@ -17,6 +17,12 @@ const uint8_t MAX_MSG_LEN = 255;
 
 #define txPin 2
 
+//preabmle to send before each transmission to get the receiver tuned
+//increase this if you decrease pulse durations
+//in my experiments I needed ~50ms of preamble (the faster the datarate the more preabmle needed)
+//however Internet suggests much shorter times, radiohead for example uses 36bits at 2000 baud rate = ~18ms
+#define NUM_PREAMBLE_BYTES 6
+
 
 #define fast
 
