@@ -9,10 +9,12 @@
 #endif
 
 #ifdef SERIAL_ENABLE
+	#define TINYRF_SERIAL_BEGIN(x) (Serial.begin(x))
 	#define TINYRF_PRINTLN(x) (Serial.println(x))
 	#define TINYRF_PRINT(x) (Serial.print(x))
 	#define TINYRF_PRINT2(x,y) (Serial.print(x,y))
 #else
+	#define TINYRF_SERIAL_BEGIN(x)
 	#define TINYRF_PRINTLN(x)
 	#define TINYRF_PRINT(x)
 	#define TINYRF_PRINT2(x,y)
@@ -79,7 +81,7 @@ const uint8_t MAX_MSG_LEN = 255;
 //todo: it is best to not use bytes as preabmle for very fast datarates, instead send raw HIGH,LOW
 #define superfast
 
-#ifdef fast
+#ifdef slow
 const unsigned int START_PULSE_PERIOD = 8000;
 const unsigned int ONE_PULSE_PERIOD = 5000;
 const unsigned int ZERO_PULSE_PERIOD = 3000;
@@ -112,7 +114,7 @@ const unsigned int NUM_PREAMBLE_BYTES = 5;
 #ifdef superfast
 const unsigned int START_PULSE_PERIOD = 2000;
 const unsigned int ONE_PULSE_PERIOD = 1000;
-const unsigned int ZERO_PULSE_PERIOD = 800;
+const unsigned int ZERO_PULSE_PERIOD = 750;
 const unsigned int PERIOD_HIGH_DURATION = 500;
 const unsigned int TRIGER_ERROR = 30;
 const unsigned int START_PULSE_MAX_ERROR = 100;
