@@ -11,7 +11,7 @@ pulse durations to increase accuracy
 */
 
 
-//one bytes 1-s compliment checksum, supposedly the algorithm used in TCP
+//1-byte 1-s compliment checksum, supposedly the algorithm used in TCP
 byte checksum8(byte data[], uint8_t len){
 	uint16_t sum = 0;
 	// Compute the sum.  Let overflows accumulate in upper 8 bits.

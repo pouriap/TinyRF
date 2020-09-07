@@ -19,8 +19,11 @@ void setupReceiver(uint8_t pin){
 	attachInterrupt(digitalPinToInterrupt(rxPin), interrupt_routine, FALLING);
 }
 
-
-inline bool process_received_byte(){
+/**
+ * This function is called from the interrupt routine when 8 bits of data has been received
+ * It turns the bits into a byte and puts it in the buffer
+**/
+inline void process_received_byte(){
 	byte receivedData = 0x00;
 	for(uint8_t i=0; i<8; i++){
 		//if pulse is greater than START_PULSE_DURATION then we will not be here
@@ -39,6 +42,10 @@ inline bool process_received_byte(){
 
 			//Serial.println("");
 
+			//the transmission has ended
+			//put the message length at the beggining of the message data in buffer
+			//increate numMsgsInBuffer
+			//increment bufIndex for holding the next message
 			if(msgLen>0){
 				rcvdBytsBuf[msgAddrInBuf] = msgLen;
 				numMsgsInBuffer++;
@@ -47,20 +54,28 @@ inline bool process_received_byte(){
 				bufIndex++;
 			}
 
-			return false;
+			return;
 		}
 	}
 
 	//Serial.print((char)receivedData);
 
+	//we have received one bytes of data
+	//add it to the buffer
+	//increment bufIndex
+	//increment msgLen
 	rcvdBytsBuf[++bufIndex] = receivedData;
 	msgLen++;
-	return true;
+	return;
 
 }
 
-//this interrupt routine usually take 8us - sometimes goes up to 30us
-//with our 100+us pulse durations this shouldn't be a problem
+/**
+ * Interrupt routine called on falling edges of pulses
+ * We measure a pulse's period to determine wheter it is a START, 1 or 0 pulse
+ * this interrupt routine usually take 8us - sometimes goes up to 30us
+ * with our 100+us pulse durations this shouldn't be a problem
+**/
 void interrupt_routine(){
 
 	interruptRun = true;
@@ -68,28 +83,23 @@ void interrupt_routine(){
 	static uint8_t pulse_count = 0;
 
 	unsigned long time = micros();
-	unsigned long pulseDuration = time - lastTime;
+	unsigned long pulsePeriod = time - lastTime;
 	lastTime = time;
 
 	//Serial.println(pulseDuration);
 	
 	//start of transmission
-	//we also check the maximum duration for start pulse so that our start detection will be more accurate 
 	if( 
-		pulseDuration > (START_PULSE_DURATION - TRIGER_ERROR)
-		&& pulseDuration < (START_PULSE_DURATION + START_PULSE_MAX_ERROR)
+		pulsePeriod > (START_PULSE_DURATION - TRIGER_ERROR)
+		&& pulsePeriod < (START_PULSE_DURATION + START_PULSE_MAX_ERROR)
 	){
 		//if we receive a start while we are already processing an ongoing transmission
 		//we add the length of the previous message before starting to process this one
-		//this prevents a curropted buffer where length will be zero because transmission was
-		//never finished, and after that zero there will be some bytes that the getReceivedData()
-		//will treat as length
+		//this prevents a curropted buffer where length will be zero because transmission was never finished
 		//todo: or perhaps we should just ignore these messages because they're useless
 		if(transmitOngoing){
 			rcvdBytsBuf[msgAddrInBuf] = msgLen;
 			numMsgsInBuffer++;
-			//if a message's length is 0, then this block will not run and bufIndex will stay
-			//the same and next msg will be written over it
 			bufIndex++;
 		}
 		transmitOngoing = true;
@@ -98,12 +108,11 @@ void interrupt_routine(){
 		msgLen = 0;
 	}
 	else if(transmitOngoing){
-		rcvdPulses[pulse_count] = pulseDuration;
+		rcvdPulses[pulse_count] = pulsePeriod;
 		pulse_count++;
 	}
 
 	if(pulse_count == 8){
-		//reset if received bad byte (i.e noise = end of transmission)
 		//todo: this doesn't need return type
 		process_received_byte();
 		pulse_count = 0;
@@ -114,14 +123,13 @@ void interrupt_routine(){
 }
 
 
-
 byte getReceivedData(byte buf[]){
-
 
 	//we rely on noise to detect end of transmission
 	//in the rare event that there was no noise(the interrupt did not trigger) for a long time
 	//consider the transmission over and add received data to buffer
-#if defined(EOT_IN_RX) && !defined(EOT_NONE)
+#if !defined(EOT_IN_TX) && !defined(EOT_NONE)
+
 	static unsigned long lastInterruptRun = 0;
 	unsigned long time = micros();
 	if(interruptRun){
@@ -141,6 +149,7 @@ byte getReceivedData(byte buf[]){
 			attachInterrupt(digitalPinToInterrupt(rxPin), interrupt_routine, FALLING);
 		}
 	}
+
 #endif
 
 	if(numMsgsInBuffer == 0){
@@ -151,7 +160,9 @@ byte getReceivedData(byte buf[]){
 	//Serial.print(" - #msgs in buf: ");Serial.print(numMsgsInBuffer);
 
 	/* manage buffer */
-	//message length = data length + crc byte
+	//this is how our buffer looks like:
+	//[msg0 len|msg0 byte0|msg0 byte1|...|msg0 crc|msg1 len|msg1 byte0|msg1 byte1|msg1 crc|...]
+	//message length = data length + error checking byte
 	//bufferReadIndex points to the first byte of message, i.e. the length
 	uint8_t msgLen = rcvdBytsBuf[bufferReadIndex];
 	//move buffer pointer one byte further
@@ -180,21 +191,21 @@ byte getReceivedData(byte buf[]){
 		buf[i] = rcvdBytsBuf[bufferReadIndex++];
 	}
 
-	//crc
-	byte crcRcvd = rcvdBytsBuf[bufferReadIndex];
-	//go to next byte
-	bufferReadIndex++;
-	byte crcCalc = crc8(buf, dataLen);
+	//error checking
+	#ifndef ERROR_CHECKING_NONE
+		byte errChckRcvd = rcvdBytsBuf[bufferReadIndex];
+		//move buffer pointer to next byte
+		bufferReadIndex++;
+		byte errChckCalc = ERROR_CHECKING(buf, dataLen);
 
-	//Serial.print("bufferReadIndex is now: ");Serial.println(bufferReadIndex, DEC);
+		//Serial.print("bufferReadIndex is now: ");Serial.println(bufferReadIndex, DEC);
 
-	if(crcRcvd != crcCalc){
-		#ifndef __AVR_ATtiny13__
-		Serial.print("BAD CRC: [");Serial.print((char*)buf);Serial.println("]");
-		Serial.print("crcRcvd: ");Serial.print(crcRcvd, HEX);Serial.print(" crcCalc: ");Serial.print(crcCalc, HEX);Serial.print(" len: ");Serial.println(dataLen);
-		#endif
-		return TINYRF_ERR_BAD_CRC;
-	}
+		if(errChckRcvd != errChckCalc){
+			//Serial.print("BAD CRC: [");Serial.print((char*)buf);Serial.println("]");
+			//Serial.print("crcRcvd: ");Serial.print(errChckRcvd, HEX);Serial.print(" crcCalc: ");Serial.print(errChckCalc, HEX);Serial.print(" len: ");Serial.println(dataLen);
+			return TINYRF_ERR_BAD_CRC;
+		}
+	#endif
 
 	return TINYRF_ERR_SUCCESS;
 

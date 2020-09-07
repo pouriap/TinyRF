@@ -3,27 +3,68 @@
 
 #include "Arduino.h"
 
-//Do not increase this above 255, because all data types related to messages are uint8_t so 
-//increasing this will break the program. 
-//For example 'len' arugment of send() function is uint8_t so you can't 
-//send anything longer than 255 bytes even if you increase this
+
+/**
+ * This isn't used anywhere in the library. It is defined here for reference and for being used
+ * as buffer size in programs that use this library.
+ * Do not increase this above 255, because all data types related to messages are uint8_t so 
+ * increasing this will break the program.
+ * Even tho sending messages of this length is theoretically possible, it is not recommended to 
+ * send anything larger thatn 128 bit due to noise.
+**/
 const uint8_t MAX_MSG_LEN = 255;
 
-//where should we do end of transmission check?
-//best place is in TX but if you have limited memory you can do it in RX but that will increase
-//error rate. alternatively you can just disable it using EOT_NONE.
-#define EOT_IN_RX
+
+/**
+ * We don't have a specific pulse that signals the end of a transmission. We rely on noise for that.
+ * When noise is received in the receiver the transmission is considered over.
+ * But in the rare even that you are in a noiseless environment this could mean that the receiver 
+ * will keep waiting for the next byte of the transmission. There are two ways we can fix that
+ * 1- Create noise in the TX: i.e. send a bunch of meaningless pulses 
+ * 2- Detect end of transmission in RX: i.e. when no data has been received for a while considere the transmission finished
+ * The default is EOT_IN_RX because we want to minimize the transmitter code size
+ * You can uncomment EOT_IN_TX if you want EOT to be done in transmitter
+ * Alternatively you can uncomment EOT_NONE if you think you don't need this
+**/
+//#define EOT_IN_TX
 //#define EOT_NONE
 
+/**
+ * What kind of error checking should be used
+ * CRC detects more errors but uses ~20bytes more program space
+ * Checksum detects less errors
+ * Alternatively you can use ERROR_CHECKING_NONE to disable error checking
+ * Note that error checking can only detect if a data was curropted during transmission. 
+ * It cannot recover the original data. So you still need to send a message multiple times to 
+ * make sure it is received.
+**/
+//#define ERROR_CHECKING crc8
+//#define ERROR_CHECKING checksum8
+#define ERROR_CHECKING_NONE
+
+/**
+ * The pin that is connected to the transmission module
+ * We use a #define instead of settting it programatically in order to save program space on TX
+**/
 #define txPin 2
 
-//preabmle to send before each transmission to get the receiver tuned
-//increase this if you decrease pulse durations
-//in my experiments I needed ~50ms of preamble (the faster the datarate the more preabmle needed)
-//however Internet suggests much shorter times, radiohead for example uses 36bits at 2000 baud rate = ~18ms
+
+/**
+ * Preabmle to send before each transmission to get the receiver tuned.
+ * Increase this if you decrease pulse durations.
+ * In my experiments I needed ~50ms of preamble (the faster the datarate the more preabmle needed).
+ * However Internet suggests much shorter times.
+**/
 #define NUM_PREAMBLE_BYTES 6
 
 
+/**
+ * Data rate presets
+ * According to the datasheet uncalibrated ATtiny13 has 10% frequency error.
+ * We also need at least 50us of error margin because we use delayMicroseconds() which isn't super accurate.
+ * In my experience "fast" was the best I could do with ATtiny13 as TX
+ * If you are using an Arduino as TX you can go up to "lightning" speed
+**/
 #define fast
 
 #ifdef slow
@@ -31,6 +72,8 @@ const unsigned int START_PULSE_DURATION = 8000;
 const unsigned int ONE_PULSE_DURATION = 5000;
 const unsigned int ZERO_PULSE_DURATION = 3000;
 const unsigned int HIGH_PERIOD_DURATION = 2000;
+const unsigned int TRIGER_ERROR = 50;
+const unsigned int START_PULSE_MAX_ERROR = 200;
 #endif
  
 #ifdef good
@@ -38,6 +81,8 @@ const unsigned int START_PULSE_DURATION = 6000;
 const unsigned int ONE_PULSE_DURATION = 4000;
 const unsigned int ZERO_PULSE_DURATION = 3000;
 const unsigned int HIGH_PERIOD_DURATION = 2000;
+const unsigned int TRIGER_ERROR = 50;
+const unsigned int START_PULSE_MAX_ERROR = 200;
 #endif
 
 #ifdef fast
@@ -45,6 +90,8 @@ const unsigned int START_PULSE_DURATION = 3000;
 const unsigned int ONE_PULSE_DURATION = 2000;
 const unsigned int ZERO_PULSE_DURATION = 1500;
 const unsigned int HIGH_PERIOD_DURATION = 1000;
+const unsigned int TRIGER_ERROR = 50;
+const unsigned int START_PULSE_MAX_ERROR = 200;
 #endif
 
 #ifdef superfast
@@ -52,6 +99,8 @@ const unsigned int START_PULSE_DURATION = 2000;
 const unsigned int ONE_PULSE_DURATION = 1000;
 const unsigned int ZERO_PULSE_DURATION = 800;
 const unsigned int HIGH_PERIOD_DURATION = 500;
+const unsigned int TRIGER_ERROR = 30;
+const unsigned int START_PULSE_MAX_ERROR = 100;
 #endif
 
 #ifdef lightning
@@ -59,9 +108,14 @@ const unsigned int START_PULSE_DURATION = 2000;
 const unsigned int ONE_PULSE_DURATION = 400;
 const unsigned int ZERO_PULSE_DURATION = 300;
 const unsigned int HIGH_PERIOD_DURATION = 200;
+const unsigned int TRIGER_ERROR = 30;
+const unsigned int START_PULSE_MAX_ERROR = 100;
 #endif
 
-//Function declarations
+
+/**
+ * Function declarations
+**/
 byte checksum8(byte data[], uint8_t len);
 byte crc8(byte data[], uint8_t len);
 
