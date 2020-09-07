@@ -1,15 +1,21 @@
 #include "TinyRF_RX.h"
 
+//todo: somtimes getReceivedData() returned empty buffer with TINYRF_ERR_SUCCESS
+
 volatile bool transmitOngoing = false;
+//set to true every time interrupt runs, used to determine when data hasn't come in for a long time
 volatile bool interruptRun = false;
+//index of rcvdBytsBuf to put the next byte in
 volatile uint8_t bufIndex = 0;
+//buffer for received bytes
 byte rcvdBytsBuf[RX_BUFFER_SIZE];
+//buffer for received pulses(bits)
 volatile unsigned long rcvdPulses[8];
 volatile uint8_t numMsgsInBuffer = 0;
 volatile uint8_t msgAddrInBuf = 0;
 volatile uint8_t msgLen = 0;
+//indicates where in the received bytes buffer to read next, used by getReceivedData()
 uint8_t bufferReadIndex = 0;
-volatile unsigned long lastTime = 0;
 uint8_t rxPin = 2;
 
 
@@ -81,6 +87,7 @@ void interrupt_routine(){
 	interruptRun = true;
 
 	static uint8_t pulse_count = 0;
+	static unsigned long lastTime = 0;
 
 	unsigned long time = micros();
 	unsigned long pulsePeriod = time - lastTime;
@@ -175,8 +182,12 @@ byte getReceivedData(byte buf[]){
 		return TINYRF_ERR_NO_DATA;
 	}
 
-	//dataLen is the actual data, i.e. minus the CRC
-	uint8_t dataLen = msgLen - 1;
+	//dataLen is the actual data, i.e. minus the CRC (if available)
+	#ifndef ERROR_CHECKING_NONE
+		uint8_t dataLen = msgLen - 1;
+	#else
+		uint8_t dataLen = msgLen;
+	#endif
 
 	//TINYRF_PRINT(" - read index: ");TINYRF_PRINT(bufferReadIndex, DEC);
 	//TINYRF_PRINT(" - len: ");TINYRF_PRINT(msgLen);
