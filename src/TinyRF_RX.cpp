@@ -34,14 +34,14 @@ inline void process_received_byte(){
 	for(uint8_t i=0; i<8; i++){
 		//if pulse is greater than START_PULSE_PERIOD then we will not be here
 		if( 
-			rcvdPulses[i] > (ONE_PULSE_PERIOD - TRIGER_ERROR)
-			&& rcvdPulses[i] < (ONE_PULSE_PERIOD + TRIGER_ERROR)
+			rcvdPulses[i] > (ONE_PULSE_PERIOD - ONE_PULSE_TRIGG_ERROR)
+			&& rcvdPulses[i] < (ONE_PULSE_PERIOD + ONE_PULSE_TRIGG_ERROR)
 		){
 			receivedData |= (1<<i);
 		}
 		else if( 
-			rcvdPulses[i] < (ZERO_PULSE_PERIOD - TRIGER_ERROR)
-			|| rcvdPulses[i] > (ZERO_PULSE_PERIOD + TRIGER_ERROR)
+			rcvdPulses[i] < (ZERO_PULSE_PERIOD - ZERO_PULSE_TRIGG_ERROR)
+			|| rcvdPulses[i] > (ZERO_PULSE_PERIOD + ZERO_PULSE_TRIGG_ERROR)
 		){
 			//this is noise = end of transmission
 			transmitOngoing = false;
@@ -97,7 +97,7 @@ void interrupt_routine(){
 	
 	//start of transmission
 	if( 
-		pulsePeriod > (START_PULSE_PERIOD - TRIGER_ERROR)
+		pulsePeriod > (START_PULSE_PERIOD - START_PULSE_TRIGG_ERROR)
 		&& pulsePeriod < (START_PULSE_PERIOD + START_PULSE_MAX_ERROR)
 	){
 		//if we receive a start while we are already processing an ongoing transmission

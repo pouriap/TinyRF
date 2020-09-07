@@ -6,6 +6,7 @@
 
 
 //enable serial output if board is not ATtiny13 (assuming using MicroCore)
+//used for developement debugging
 #ifndef __AVR_ATtiny13__
 	#define SERIAL_ENABLE
 #endif
@@ -23,46 +24,60 @@
 #endif
 
 
+#ifdef TX_ATTINY_UNCALIBRATED
+	#define CALIB_ERROR 10
+#else
+	#define CALIB_ERROR 0
+#endif
+
+
 //data rate presets
 #ifdef BITRATE_240
-const unsigned int START_PULSE_PERIOD = 6000;
-const unsigned int ONE_PULSE_PERIOD = 4000;
-const unsigned int ZERO_PULSE_PERIOD = 3000;
-const unsigned int PERIOD_HIGH_DURATION = 2000;
-const unsigned int TRIGER_ERROR = 50;
-const unsigned int START_PULSE_MAX_ERROR = 200;
-const unsigned int NUM_PREAMBLE_BYTES = 3;
+	const uint16_t START_PULSE_PERIOD = 6000;
+	const uint16_t ONE_PULSE_PERIOD = 4000;
+	const uint16_t ZERO_PULSE_PERIOD = 3000;
+	const uint16_t PERIOD_HIGH_DURATION = 2000;
+	const uint16_t TRIGER_ERROR = 50;
+	const uint16_t START_PULSE_MAX_ERROR = 200;
+	const uint16_t NUM_PREAMBLE_BYTES = 3;
 #endif
 
 #ifdef BITRATE_500
-const unsigned int START_PULSE_PERIOD = 3000;
-const unsigned int ONE_PULSE_PERIOD = 2000;
-const unsigned int ZERO_PULSE_PERIOD = 1500;
-const unsigned int PERIOD_HIGH_DURATION = 1000;
-const unsigned int TRIGER_ERROR = 50;
-const unsigned int START_PULSE_MAX_ERROR = 200;
-const unsigned int NUM_PREAMBLE_BYTES = 5;
+	const uint16_t START_PULSE_PERIOD = 3000;
+	const uint16_t ONE_PULSE_PERIOD = 2000;
+	const uint16_t ZERO_PULSE_PERIOD = 1500;
+	const uint16_t PERIOD_HIGH_DURATION = 1000;
+	const uint16_t TRIGER_ERROR = 50;
+	const uint16_t START_PULSE_MAX_ERROR = 200;
+	const uint16_t NUM_PREAMBLE_BYTES = 5;
 #endif
 
 #ifdef BITRATE_1100
-const unsigned int START_PULSE_PERIOD = 2000;
-const unsigned int ONE_PULSE_PERIOD = 1000;
-const unsigned int ZERO_PULSE_PERIOD = 750;
-const unsigned int PERIOD_HIGH_DURATION = 500;
-const unsigned int TRIGER_ERROR = 30;
-const unsigned int START_PULSE_MAX_ERROR = 100;
-const unsigned int NUM_PREAMBLE_BYTES = 15;
+	const uint16_t START_PULSE_PERIOD = 2000;
+	const uint16_t ONE_PULSE_PERIOD = 1000;
+	const uint16_t ZERO_PULSE_PERIOD = 750;
+	const uint16_t PERIOD_HIGH_DURATION = 500;
+	const uint16_t TRIGER_ERROR = 30;
+	const uint16_t START_PULSE_MAX_ERROR = 100;
+	const uint16_t NUM_PREAMBLE_BYTES = 15;
 #endif
 
 #ifdef BITRATE_2500
-const unsigned int START_PULSE_PERIOD = 2000;
-const unsigned int ONE_PULSE_PERIOD = 400;
-const unsigned int ZERO_PULSE_PERIOD = 300;
-const unsigned int PERIOD_HIGH_DURATION = 200;
-const unsigned int TRIGER_ERROR = 30;
-const unsigned int START_PULSE_MAX_ERROR = 100;
-const unsigned int NUM_PREAMBLE_BYTES = 30;
+	#ifdef TX_ATTINY_UNCALIBRATED
+		#warning "This data rate is too fast for an uncalibrated ATtiny."
+	#endif
+	const uint16_t START_PULSE_PERIOD = 2000;
+	const uint16_t ONE_PULSE_PERIOD = 400;
+	const uint16_t ZERO_PULSE_PERIOD = 300;
+	const uint16_t PERIOD_HIGH_DURATION = 200;
+	const uint16_t TRIGER_ERROR = 30;
+	const uint16_t START_PULSE_MAX_ERROR = 100;
+	const uint16_t NUM_PREAMBLE_BYTES = 30;
 #endif
+
+const uint16_t ONE_PULSE_TRIGG_ERROR = (TRIGER_ERROR + ONE_PULSE_PERIOD * CALIB_ERROR / 100);
+const uint16_t ZERO_PULSE_TRIGG_ERROR = (TRIGER_ERROR + ZERO_PULSE_PERIOD * CALIB_ERROR / 100);
+const uint16_t START_PULSE_TRIGG_ERROR = (TRIGER_ERROR + START_PULSE_PERIOD * CALIB_ERROR / 100);
 
 
 /**

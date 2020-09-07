@@ -58,6 +58,14 @@
 
 
 /**
+ * If you are using an uncalibrated ATtiny as transmitter leave this define as it is
+ * If your ATtiny is calibrated or if you're using a crystal oscillator or if you're using
+ * an Arduino as transmitter comment out this line
+**/
+#define TX_ATTINY_UNCALIBRATED
+
+
+/**
  * This isn't used anywhere in the library. It is defined here for reference and for being used
  * as buffer size in programs that use this library.
  * Do not increase this above 255, because all data types related to messages are uint8_t so 
