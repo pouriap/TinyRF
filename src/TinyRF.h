@@ -15,6 +15,8 @@ const uint8_t MAX_MSG_LEN = 255;
 #define EOT_IN_RX
 //#define EOT_NONE
 
+#define txPin 2
+
 
 #define fast
 

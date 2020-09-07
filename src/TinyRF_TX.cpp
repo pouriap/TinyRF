@@ -1,9 +1,6 @@
 #include "TinyRF_TX.h"
 
-uint8_t txPin = 2;
-
-void setupTransmitter(uint8_t pin){
-	txPin = pin;
+void setupTransmitter(){
 	pinMode(txPin, OUTPUT);
 }
 
@@ -24,7 +21,7 @@ void send(byte* data, uint8_t len){
 	byte crc = crc8(data, len);
 
 	//preamble
-	for(int i=0; i<PREABMLE_DURATION; i++){
+	for(uint8_t i=0; i<PREABMLE_DURATION; i++){
 		digitalWrite(txPin, LOW);
 		delayMicroseconds(200);
 		digitalWrite(txPin, HIGH);

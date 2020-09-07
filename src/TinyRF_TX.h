@@ -10,7 +10,7 @@
 const uint8_t PREABMLE_DURATION = 50;
 
 //Function declarations
-void setupTransmitter(uint8_t pin);
+void setupTransmitter();
 void send(byte data[], uint8_t len);
 void transmitByte(byte _byte);
 
