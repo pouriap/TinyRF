@@ -1,12 +1,11 @@
 #include "TinyRF.h"
 
 //todo: receiver is very sensitive to preamble, and in higher data rates we need more preable
-//todo: change pulse duration to pulse period
 
 /*
 notes:
 - if we had errors when increasing data rates it's because of noise and we should enable MAX values for
-pulse durations to increase accuracy
+pulse periods to increase accuracy
 - if we had errors when increasing gap between messages it's because of preable 
 */
 

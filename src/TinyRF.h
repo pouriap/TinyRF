@@ -58,7 +58,7 @@ const uint8_t MAX_MSG_LEN = 255;
  *
  * Preabmle:
  * Preabmle to send before each transmission to get the receiver tuned.
- * Increase preabmle if you decrease pulse durations.
+ * Increase preabmle if you decrease pulse periods.
  * In my experiments I needed ~50ms of preamble (the faster the datarate the more preabmle needed).
  * However Internet suggests much shorter times.
 **/
@@ -66,50 +66,50 @@ const uint8_t MAX_MSG_LEN = 255;
 #define superfast
 
 #ifdef fast
-const unsigned int START_PULSE_DURATION = 8000;
-const unsigned int ONE_PULSE_DURATION = 5000;
-const unsigned int ZERO_PULSE_DURATION = 3000;
-const unsigned int HIGH_PERIOD_DURATION = 2000;
+const unsigned int START_PULSE_PERIOD = 8000;
+const unsigned int ONE_PULSE_PERIOD = 5000;
+const unsigned int ZERO_PULSE_PERIOD = 3000;
+const unsigned int PERIOD_HIGH_DURATION = 2000;
 const unsigned int TRIGER_ERROR = 50;
 const unsigned int START_PULSE_MAX_ERROR = 200;
 const unsigned int NUM_PREAMBLE_BYTES = 3;
 #endif
  
 #ifdef good
-const unsigned int START_PULSE_DURATION = 6000;
-const unsigned int ONE_PULSE_DURATION = 4000;
-const unsigned int ZERO_PULSE_DURATION = 3000;
-const unsigned int HIGH_PERIOD_DURATION = 2000;
+const unsigned int START_PULSE_PERIOD = 6000;
+const unsigned int ONE_PULSE_PERIOD = 4000;
+const unsigned int ZERO_PULSE_PERIOD = 3000;
+const unsigned int PERIOD_HIGH_DURATION = 2000;
 const unsigned int TRIGER_ERROR = 50;
 const unsigned int START_PULSE_MAX_ERROR = 200;
 const unsigned int NUM_PREAMBLE_BYTES = 3;
 #endif
 
 #ifdef fast
-const unsigned int START_PULSE_DURATION = 3000;
-const unsigned int ONE_PULSE_DURATION = 2000;
-const unsigned int ZERO_PULSE_DURATION = 1500;
-const unsigned int HIGH_PERIOD_DURATION = 1000;
+const unsigned int START_PULSE_PERIOD = 3000;
+const unsigned int ONE_PULSE_PERIOD = 2000;
+const unsigned int ZERO_PULSE_PERIOD = 1500;
+const unsigned int PERIOD_HIGH_DURATION = 1000;
 const unsigned int TRIGER_ERROR = 50;
 const unsigned int START_PULSE_MAX_ERROR = 200;
 const unsigned int NUM_PREAMBLE_BYTES = 5;
 #endif
 
 #ifdef superfast
-const unsigned int START_PULSE_DURATION = 2000;
-const unsigned int ONE_PULSE_DURATION = 1000;
-const unsigned int ZERO_PULSE_DURATION = 800;
-const unsigned int HIGH_PERIOD_DURATION = 500;
+const unsigned int START_PULSE_PERIOD = 2000;
+const unsigned int ONE_PULSE_PERIOD = 1000;
+const unsigned int ZERO_PULSE_PERIOD = 800;
+const unsigned int PERIOD_HIGH_DURATION = 500;
 const unsigned int TRIGER_ERROR = 30;
 const unsigned int START_PULSE_MAX_ERROR = 100;
 const unsigned int NUM_PREAMBLE_BYTES = 15;
 #endif
 
 #ifdef lightning
-const unsigned int START_PULSE_DURATION = 2000;
-const unsigned int ONE_PULSE_DURATION = 400;
-const unsigned int ZERO_PULSE_DURATION = 300;
-const unsigned int HIGH_PERIOD_DURATION = 200;
+const unsigned int START_PULSE_PERIOD = 2000;
+const unsigned int ONE_PULSE_PERIOD = 400;
+const unsigned int ZERO_PULSE_PERIOD = 300;
+const unsigned int PERIOD_HIGH_DURATION = 200;
 const unsigned int TRIGER_ERROR = 30;
 const unsigned int START_PULSE_MAX_ERROR = 100;
 const unsigned int NUM_PREAMBLE_BYTES = 30;

@@ -26,16 +26,16 @@ void setupReceiver(uint8_t pin){
 inline void process_received_byte(){
 	byte receivedData = 0x00;
 	for(uint8_t i=0; i<8; i++){
-		//if pulse is greater than START_PULSE_DURATION then we will not be here
+		//if pulse is greater than START_PULSE_PERIOD then we will not be here
 		if( 
-			rcvdPulses[i] > (ONE_PULSE_DURATION - TRIGER_ERROR)
-			&& rcvdPulses[i] < (ONE_PULSE_DURATION + TRIGER_ERROR)
+			rcvdPulses[i] > (ONE_PULSE_PERIOD - TRIGER_ERROR)
+			&& rcvdPulses[i] < (ONE_PULSE_PERIOD + TRIGER_ERROR)
 		){
 			receivedData |= (1<<i);
 		}
 		else if( 
-			rcvdPulses[i] < (ZERO_PULSE_DURATION - TRIGER_ERROR)
-			|| rcvdPulses[i] > (ZERO_PULSE_DURATION + TRIGER_ERROR)
+			rcvdPulses[i] < (ZERO_PULSE_PERIOD - TRIGER_ERROR)
+			|| rcvdPulses[i] > (ZERO_PULSE_PERIOD + TRIGER_ERROR)
 		){
 			//this is noise = end of transmission
 			transmitOngoing = false;
@@ -74,7 +74,7 @@ inline void process_received_byte(){
  * Interrupt routine called on falling edges of pulses
  * We measure a pulse's period to determine wheter it is a START, 1 or 0 pulse
  * this interrupt routine usually take 8us - sometimes goes up to 30us
- * with our 100+us pulse durations this shouldn't be a problem
+ * with our 100+us pulse periods this shouldn't be a problem
 **/
 void interrupt_routine(){
 
@@ -86,12 +86,12 @@ void interrupt_routine(){
 	unsigned long pulsePeriod = time - lastTime;
 	lastTime = time;
 
-	//Serial.println(pulseDuration);
+	//Serial.println(pulsePeriod);
 	
 	//start of transmission
 	if( 
-		pulsePeriod > (START_PULSE_DURATION - TRIGER_ERROR)
-		&& pulsePeriod < (START_PULSE_DURATION + START_PULSE_MAX_ERROR)
+		pulsePeriod > (START_PULSE_PERIOD - TRIGER_ERROR)
+		&& pulsePeriod < (START_PULSE_PERIOD + START_PULSE_MAX_ERROR)
 	){
 		//if we receive a start while we are already processing an ongoing transmission
 		//we add the length of the previous message before starting to process this one
@@ -137,7 +137,7 @@ byte getReceivedData(byte buf[]){
 		interruptRun = false;
 	}
 	else if(transmitOngoing){
-		if( (time - lastInterruptRun) > (START_PULSE_DURATION*2) ){
+		if( (time - lastInterruptRun) > (START_PULSE_PERIOD*2) ){
 			//we don't want the interrupt to run while we're modifying these
 			//it's unlikely that this will hurt the interrupt because if it hasn't run for a while it means
 			//transmission has stopped. also this is quite short

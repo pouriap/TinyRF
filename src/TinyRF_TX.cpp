@@ -31,9 +31,9 @@ void send(byte* data, uint8_t len){
 
 	//START pulse
 	digitalWrite(txPin, LOW);
-	delayMicroseconds(START_PULSE_DURATION - HIGH_PERIOD_DURATION);
+	delayMicroseconds(START_PULSE_PERIOD - PERIOD_HIGH_DURATION);
 	digitalWrite(txPin, HIGH);
-	delayMicroseconds(HIGH_PERIOD_DURATION - 4);	//-4 because digitalWrite takes ~4us
+	delayMicroseconds(PERIOD_HIGH_DURATION - 4);	//-4 because digitalWrite takes ~4us
 
 	//data
 	for(uint8_t i=0; i<len; i++){
@@ -56,9 +56,9 @@ void send(byte* data, uint8_t len){
 	//we really need 8 to fill the rcvdPulses[] buffer, but we send 10 just to be sure
 #if defined(EOT_IN_TX) && !defined(EOT_NONE)
 	for(uint8_t i=0; i<10; i++){
-		delayMicroseconds(HIGH_PERIOD_DURATION/2);
+		delayMicroseconds(PERIOD_HIGH_DURATION/2);
 		digitalWrite(txPin, HIGH);
-		delayMicroseconds(HIGH_PERIOD_DURATION/2);
+		delayMicroseconds(PERIOD_HIGH_DURATION/2);
 		digitalWrite(txPin, LOW);
 	}
 #endif
@@ -73,14 +73,14 @@ void transmitByte(byte _byte){
 		digitalWrite(txPin, LOW);
 		//if 1
 		if(_byte & (1<<i)){
-			delayMicroseconds(ONE_PULSE_DURATION - HIGH_PERIOD_DURATION);
+			delayMicroseconds(ONE_PULSE_PERIOD - PERIOD_HIGH_DURATION);
 		}
 		else{
-			delayMicroseconds(ZERO_PULSE_DURATION - HIGH_PERIOD_DURATION);
+			delayMicroseconds(ZERO_PULSE_PERIOD - PERIOD_HIGH_DURATION);
 		}
 		//send the HIGH part of the pulse
 		//all pulses have the same HIGH duration
 		digitalWrite(txPin, HIGH);
-		delayMicroseconds(HIGH_PERIOD_DURATION - 4);
+		delayMicroseconds(PERIOD_HIGH_DURATION - 4);
 	}
 }
