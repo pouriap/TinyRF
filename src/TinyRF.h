@@ -38,9 +38,9 @@ const uint8_t MAX_MSG_LEN = 255;
  * It cannot recover the original data. So you still need to send a message multiple times to 
  * make sure it is received.
 **/
-//#define ERROR_CHECKING crc8
+#define ERROR_CHECKING crc8
 //#define ERROR_CHECKING checksum8
-#define ERROR_CHECKING_NONE
+//#define ERROR_CHECKING_NONE
 
 /**
  * The pin that is connected to the transmission module
@@ -50,30 +50,29 @@ const uint8_t MAX_MSG_LEN = 255;
 
 
 /**
- * Preabmle to send before each transmission to get the receiver tuned.
- * Increase this if you decrease pulse durations.
- * In my experiments I needed ~50ms of preamble (the faster the datarate the more preabmle needed).
- * However Internet suggests much shorter times.
-**/
-#define NUM_PREAMBLE_BYTES 6
-
-
-/**
  * Data rate presets
  * According to the datasheet uncalibrated ATtiny13 has 10% frequency error.
  * We also need at least 50us of error margin because we use delayMicroseconds() which isn't super accurate.
  * In my experience "fast" was the best I could do with ATtiny13 as TX
  * If you are using an Arduino as TX you can go up to "lightning" speed
+ *
+ * Preabmle:
+ * Preabmle to send before each transmission to get the receiver tuned.
+ * Increase preabmle if you decrease pulse durations.
+ * In my experiments I needed ~50ms of preamble (the faster the datarate the more preabmle needed).
+ * However Internet suggests much shorter times.
 **/
-#define fast
+//todo: it is best to not use bytes as preabmle for very fast datarates, instead send raw HIGH,LOW
+#define superfast
 
-#ifdef slow
+#ifdef fast
 const unsigned int START_PULSE_DURATION = 8000;
 const unsigned int ONE_PULSE_DURATION = 5000;
 const unsigned int ZERO_PULSE_DURATION = 3000;
 const unsigned int HIGH_PERIOD_DURATION = 2000;
 const unsigned int TRIGER_ERROR = 50;
 const unsigned int START_PULSE_MAX_ERROR = 200;
+const unsigned int NUM_PREAMBLE_BYTES = 3;
 #endif
  
 #ifdef good
@@ -83,6 +82,7 @@ const unsigned int ZERO_PULSE_DURATION = 3000;
 const unsigned int HIGH_PERIOD_DURATION = 2000;
 const unsigned int TRIGER_ERROR = 50;
 const unsigned int START_PULSE_MAX_ERROR = 200;
+const unsigned int NUM_PREAMBLE_BYTES = 3;
 #endif
 
 #ifdef fast
@@ -92,6 +92,7 @@ const unsigned int ZERO_PULSE_DURATION = 1500;
 const unsigned int HIGH_PERIOD_DURATION = 1000;
 const unsigned int TRIGER_ERROR = 50;
 const unsigned int START_PULSE_MAX_ERROR = 200;
+const unsigned int NUM_PREAMBLE_BYTES = 5;
 #endif
 
 #ifdef superfast
@@ -101,6 +102,7 @@ const unsigned int ZERO_PULSE_DURATION = 800;
 const unsigned int HIGH_PERIOD_DURATION = 500;
 const unsigned int TRIGER_ERROR = 30;
 const unsigned int START_PULSE_MAX_ERROR = 100;
+const unsigned int NUM_PREAMBLE_BYTES = 15;
 #endif
 
 #ifdef lightning
@@ -110,6 +112,7 @@ const unsigned int ZERO_PULSE_DURATION = 300;
 const unsigned int HIGH_PERIOD_DURATION = 200;
 const unsigned int TRIGER_ERROR = 30;
 const unsigned int START_PULSE_MAX_ERROR = 100;
+const unsigned int NUM_PREAMBLE_BYTES = 30;
 #endif
 
 
