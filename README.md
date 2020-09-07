@@ -7,27 +7,28 @@ A library to use cheap 315/433Mhz RF modules with ATtiny13 as transmitter.
 * Up to 255 byte message length
 * CRC/checksum error checking
 * Customizable
-* (Relatively) low FLASH and RAM usage
 
 Transmitter MCU support: ATtiny13 and anything else.
+
 Receiver MCU support: Currently Arduino and other higher-resource MCUs are needed as receiver because it needs more resources.
 
 ## How to use
 Copy the repository in your libraries folder.
+
 ### Transmitter sketch:
 	#include "TinyRF_TX.h"
-	void Setup(){
-		pinMode(2, OUTPUT);
+	void setup(){
+		setupTransmitter();
 	}
 	void loop(){
 		const char* msg = "Hello!";
-		send(msg, strlen(msg)+1); //include null character
+		send((byte*)msg, strlen(msg)+1); //include null character
 	}
 
 ### Receiver sketch:
 	#include "TinyRF_RX.h"
 	int rxPin = 2;
-	void Setup(){
+	void setup(){
 		Serial.begin(9600);
 		setupReceiver(rxPin);
 	}

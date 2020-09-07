@@ -1,25 +1,30 @@
 #include "TinyRF_RX.h"
 
-//todo: somtimes getReceivedData() returned empty buffer with TINYRF_ERR_SUCCESS
+namespace tinyrf{
 
-volatile bool transmitOngoing = false;
-//set to true every time interrupt runs, used to determine when data hasn't come in for a long time
-volatile bool interruptRun = false;
-//index of rcvdBytsBuf to put the next byte in
-volatile uint8_t bufIndex = 0;
-//buffer for received bytes
-byte rcvdBytsBuf[RX_BUFFER_SIZE];
-//buffer for received pulses(bits)
-volatile unsigned long rcvdPulses[8];
-volatile uint8_t numMsgsInBuffer = 0;
-volatile uint8_t msgAddrInBuf = 0;
-volatile uint8_t msgLen = 0;
-//indicates where in the received bytes buffer to read next, used by getReceivedData()
-uint8_t bufferReadIndex = 0;
-uint8_t rxPin = 2;
+	//todo: somtimes getReceivedData() returned empty buffer with TINYRF_ERR_SUCCESS
+
+	volatile bool transmitOngoing = false;
+	//set to true every time interrupt runs, used to determine when data hasn't come in for a long time
+	volatile bool interruptRun = false;
+	//index of rcvdBytsBuf to put the next byte in
+	volatile uint8_t bufIndex = 0;
+	//buffer for received bytes
+	byte rcvdBytsBuf[RX_BUFFER_SIZE];
+	//buffer for received pulses(bits)
+	volatile unsigned long rcvdPulses[8];
+	volatile uint8_t numMsgsInBuffer = 0;
+	volatile uint8_t msgAddrInBuf = 0;
+	volatile uint8_t msgLen = 0;
+	//indicates where in the received bytes buffer to read next, used by getReceivedData()
+	uint8_t bufferReadIndex = 0;
+	uint8_t rxPin = 2;
+
+}
 
 
 void setupReceiver(uint8_t pin){
+	using namespace tinyrf;
 	rxPin = pin;
 	pinMode(rxPin, INPUT);
 	attachInterrupt(digitalPinToInterrupt(rxPin), interrupt_routine, FALLING);
@@ -30,6 +35,7 @@ void setupReceiver(uint8_t pin){
  * It turns the bits into a byte and puts it in the buffer
 **/
 inline void process_received_byte(){
+	using namespace tinyrf;
 	byte receivedData = 0x00;
 	for(uint8_t i=0; i<8; i++){
 		//if pulse is greater than START_PULSE_PERIOD then we will not be here
@@ -84,6 +90,8 @@ inline void process_received_byte(){
 **/
 void interrupt_routine(){
 
+	using namespace tinyrf;
+
 	interruptRun = true;
 
 	static uint8_t pulse_count = 0;
@@ -131,6 +139,8 @@ void interrupt_routine(){
 
 
 byte getReceivedData(byte buf[]){
+
+	using namespace tinyrf;
 
 	//we rely on noise to detect end of transmission
 	//in the rare event that there was no noise(the interrupt did not trigger) for a long time
@@ -221,3 +231,4 @@ byte getReceivedData(byte buf[]){
 	return TINYRF_ERR_SUCCESS;
 
 }
+
