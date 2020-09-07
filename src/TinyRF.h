@@ -3,6 +3,20 @@
 
 #include "Arduino.h"
 
+//enable serial output if board is not ATtiny13 (assuming using MicroCore)
+#ifndef __AVR_ATtiny13__
+	#define SERIAL_ENABLE
+#endif
+
+#ifdef SERIAL_ENABLE
+	#define TINYRF_PRINTLN(x) (Serial.println(x))
+	#define TINYRF_PRINT(x) (Serial.print(x))
+	#define TINYRF_PRINT2(x,y) (Serial.print(x,y))
+#else
+	#define TINYRF_PRINTLN(x)
+	#define TINYRF_PRINT(x)
+	#define TINYRF_PRINT2(x,y)
+#endif
 
 /**
  * This isn't used anywhere in the library. It is defined here for reference and for being used

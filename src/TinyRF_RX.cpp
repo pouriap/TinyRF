@@ -40,7 +40,7 @@ inline void process_received_byte(){
 			//this is noise = end of transmission
 			transmitOngoing = false;
 
-			//Serial.println("");
+			//TINYRF_PRINTLN("");
 
 			//the transmission has ended
 			//put the message length at the beggining of the message data in buffer
@@ -58,7 +58,7 @@ inline void process_received_byte(){
 		}
 	}
 
-	//Serial.print((char)receivedData);
+	//TINYRF_PRINT((char)receivedData);
 
 	//we have received one bytes of data
 	//add it to the buffer
@@ -86,7 +86,7 @@ void interrupt_routine(){
 	unsigned long pulsePeriod = time - lastTime;
 	lastTime = time;
 
-	//Serial.println(pulsePeriod);
+	//TINYRF_PRINTLN(pulsePeriod);
 	
 	//start of transmission
 	if( 
@@ -118,7 +118,7 @@ void interrupt_routine(){
 		pulse_count = 0;
 	}
 
-	//Serial.println(micros() - time);
+	//TINYRF_PRINTLN(micros() - time);
 
 }
 
@@ -156,8 +156,8 @@ byte getReceivedData(byte buf[]){
 		return TINYRF_ERR_NO_DATA;
 	}
 
-	//Serial.print("len addr: ");Serial.print(bufferReadIndex, DEC);
-	//Serial.print(" - #msgs in buf: ");Serial.print(numMsgsInBuffer);
+	//TINYRF_PRINT("len addr: ");TINYRF_PRINT(bufferReadIndex, DEC);
+	//TINYRF_PRINT(" - #msgs in buf: ");TINYRF_PRINT(numMsgsInBuffer);
 
 	/* manage buffer */
 	//this is how our buffer looks like:
@@ -178,13 +178,13 @@ byte getReceivedData(byte buf[]){
 	//dataLen is the actual data, i.e. minus the CRC
 	uint8_t dataLen = msgLen - 1;
 
-	//Serial.print(" - read index: ");Serial.print(bufferReadIndex, DEC);
-	//Serial.print(" - len: ");Serial.print(msgLen);
-	//Serial.println("");
+	//TINYRF_PRINT(" - read index: ");TINYRF_PRINT(bufferReadIndex, DEC);
+	//TINYRF_PRINT(" - len: ");TINYRF_PRINT(msgLen);
+	//TINYRF_PRINTLN("");
 	//for(int i=0; i<256; i++){
-	//	Serial.print(rcvdBytsBuf[i]);Serial.print(",");
+	//	TINYRF_PRINT(rcvdBytsBuf[i]);TINYRF_PRINT(",");
 	//}
-	//Serial.println("");
+	//TINYRF_PRINTLN("");
 
 	//copy the data from 'bufferReadIndex' until bufferReadIndex+dataLen
 	for(int i=0; i<dataLen; i++){
@@ -198,11 +198,11 @@ byte getReceivedData(byte buf[]){
 		bufferReadIndex++;
 		byte errChckCalc = ERROR_CHECKING(buf, dataLen);
 
-		//Serial.print("bufferReadIndex is now: ");Serial.println(bufferReadIndex, DEC);
+		//TINYRF_PRINT("bufferReadIndex is now: ");TINYRF_PRINTLN(bufferReadIndex, DEC);
 
 		if(errChckRcvd != errChckCalc){
-			//Serial.print("BAD CRC: [");Serial.print((char*)buf);Serial.println("]");
-			//Serial.print("crcRcvd: ");Serial.print(errChckRcvd, HEX);Serial.print(" crcCalc: ");Serial.print(errChckCalc, HEX);Serial.print(" len: ");Serial.println(dataLen);
+			TINYRF_PRINT("BAD CRC: [");TINYRF_PRINT((char*)buf);TINYRF_PRINTLN("]");
+			TINYRF_PRINT("crcRcvd: ");TINYRF_PRINT2(errChckRcvd, HEX);TINYRF_PRINT(" crcCalc: ");TINYRF_PRINT2(errChckCalc, HEX);TINYRF_PRINT(" len: ");TINYRF_PRINTLN(dataLen);
 			return TINYRF_ERR_BAD_CRC;
 		}
 	#endif
