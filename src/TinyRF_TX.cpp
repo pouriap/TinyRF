@@ -25,6 +25,7 @@ void send(byte* data, uint8_t len){
 	//preamble
 	//based on our pulse period our zeroes have more HIGH time than our ones
 	//so we send zero bytes as preamble
+	//todo: it is best to not use bytes as preabmle for very fast datarates, instead send raw HIGH,LOW
 	for(uint8_t i=0; i<NUM_PREAMBLE_BYTES; i++){
 		transmitByte(0x00);
 	}

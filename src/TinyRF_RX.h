@@ -25,4 +25,4 @@ void interrupt_routine();
 byte getReceivedData(byte buf[]);
 
 
-#endif
+#endif	/* TINYRF_RX_H */

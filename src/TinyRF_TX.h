@@ -9,4 +9,4 @@ void send(byte data[], uint8_t len);
 void transmitByte(byte _byte);
 
 
-#endif
+#endif	/* TINYRF_TX_H */
