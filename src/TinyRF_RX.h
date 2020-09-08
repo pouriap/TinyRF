@@ -8,8 +8,7 @@
 const uint8_t TINYRF_ERR_NO_DATA = 0;
 const uint8_t TINYRF_ERR_BAD_CRC = 1;
 const uint8_t TINYRF_ERR_SUCCESS = 2;
-const uint8_t TINYRF_ERR_MSGS_LOST = 3;
-const uint8_t TINYRF_ERR_BUFFER_OVERFLOW = 4;
+const uint8_t TINYRF_ERR_BUFFER_OVERFLOW = 3;
 
 
 /**

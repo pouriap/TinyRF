@@ -3,6 +3,7 @@
 namespace tinyrf{
 
 	//todo: somtimes getReceivedData() returned empty buffer with TINYRF_ERR_SUCCESS
+	//todo: optimize variable types
 
 	volatile bool transmitOngoing = false;
 	//set to true every time interrupt runs, used to determine when data hasn't come in for a long time
@@ -241,9 +242,6 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 		//TINYRF_PRINT("bufferReadIndex is now: ");TINYRF_PRINTLN(bufferReadIndex, DEC);
 
 		if(errChckRcvd != errChckCalc){
-			TINYRF_PRINT("BAD CRC: [");TINYRF_PRINT((char*)buf);TINYRF_PRINTLN("]");
-			TINYRF_PRINT("crcRcvd: ");TINYRF_PRINT2(errChckRcvd, HEX);TINYRF_PRINT(" crcCalc: ");
-			TINYRF_PRINT2(errChckCalc, HEX);TINYRF_PRINT(" len: ");TINYRF_PRINTLN(payloadLen);
 			return TINYRF_ERR_BAD_CRC;
 		}
 	#endif
@@ -272,16 +270,14 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 			numLostMsgs = 255 - lastSeq + seq;
 		}
 
+		TINYRF_PRINT(seq);TINYRF_PRINT(":");
+
 		if(seq == 255){
 			//because next valid seq will be 0 
 			lastSeq = -1;
 		}
 		else{
 			lastSeq = seq;
-		}
-
-		if(numLostMsgs != 0){
-			return TINYRF_ERR_MSGS_LOST;
 		}
 
 	#endif
