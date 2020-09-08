@@ -24,18 +24,13 @@
 
 
 /**
- * We don't have a specific pulse that signals the end of a transmission. We rely on noise for that.
- * When noise is received in the receiver the transmission is considered over.
- * But in the rare even that you are in a noiseless environment this could mean that the receiver 
- * will keep waiting for the next byte of the transmission. There are two ways we can fix that
- * 1- Create noise in the TX: i.e. send a bunch of meaningless pulses 
- * 2- Detect end of transmission in RX: i.e. when no data has been received for a while considere the transmission finished
- * The default is EOT_IN_RX because we want to minimize the transmitter code size
- * You can uncomment EOT_IN_TX if you want EOT to be done in transmitter
- * Alternatively you can uncomment EOT_NONE if you think you don't need this
+ * Whether sequence numbering should be disabled
+ * It is enabled by default. Uncomment the below define to disable it.
+ * If enabled a sequence number will be attached to every message sent and in the receiver 
+ * the sequence number will be checked to determine if any messages have been lost
+ * The sequence number resets at 255 so if there's more than 255 messages lost we won't find out
 **/
-//#define EOT_IN_TX
-//#define EOT_NONE
+//#define TX_NO_SEQ
 
 
 /**
@@ -56,15 +51,6 @@
 **/
 #define BITRATE_1100
 
-/**
- * Whether sequence numbering should be disabled
- * It is enabled by default. Uncomment the below define to disable it.
- * If enabled a sequence number will be attached to every message sent and in the receiver 
- * the sequence number will be checked to determine if any messages have been lost
- * The sequence number resets at 255 so if there's more than 255 messages lost we won't find out
-**/
-//#define TX_NO_SEQ
-
 
 /**
  * If you are using an uncalibrated ATtiny as transmitter leave this define as it is
@@ -75,13 +61,18 @@
 
 
 /**
- * This isn't used anywhere in the library. It is defined here for reference and for being used
- * as buffer size in programs that use this library.
- * Do not increase this value!
- * Even tho sending messages of this length is theoretically possible, it is not recommended to 
- * send anything larger thatn 128 bit due to noise.
+ * We don't have a specific pulse that signals the end of a transmission. We rely on noise for that.
+ * When noise is received in the receiver the transmission is considered over.
+ * But in the rare even that you are in a noiseless environment this could mean that the receiver 
+ * will keep waiting for the next byte of the transmission. There are two ways we can fix that
+ * 1- Create noise in the TX: i.e. send a bunch of meaningless pulses 
+ * 2- Detect end of transmission in RX: i.e. when no data has been received for a while considere the transmission finished
+ * The default is EOT_IN_RX because we want to minimize the transmitter code size
+ * You can uncomment EOT_IN_TX if you want EOT to be done in transmitter
+ * Alternatively you can uncomment EOT_NONE if you think you don't need this
 **/
-#define MAX_MSG_LEN 250	//250 to account for CRC, seq# and any other trailer we might add later
+//#define EOT_IN_TX
+//#define EOT_NONE
 
 
 #endif	/* TINYRF_SETTINGS_H */

@@ -11,6 +11,7 @@
 	#define SERIAL_ENABLE
 #endif
 
+
 #ifdef SERIAL_ENABLE
 	#define TINYRF_SERIAL_BEGIN(x) (Serial.begin(x))
 	#define TINYRF_PRINTLN(x) (Serial.println(x))
@@ -30,6 +31,7 @@
 	#define CALIB_ERROR 0
 #endif
 
+
 #ifndef TX_NO_SEQ
 	#if defined(ERROR_CHECKING_CRC)
 		#define ERR_CHK_FUNC crc8_seq
@@ -43,6 +45,16 @@
 		#define ERR_CHK_FUNC checksum8
 	#endif
 #endif
+
+
+/**
+ * This isn't used anywhere in the library. It is defined here for reference and for being used
+ * as buffer size in programs that use this library.
+ * Do not increase this value!
+ * Even tho sending messages of this length is theoretically possible, it is not recommended to 
+ * send anything larger thatn 128 bit due to noise.
+**/
+#define MAX_MSG_LEN 250	//250 to account for CRC, seq# and any other trailer we might add later
 
 
 //data rate presets
