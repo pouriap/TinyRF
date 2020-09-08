@@ -143,8 +143,6 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 
 	using namespace tinyrf;
 
-	static int lastSeq = -2;
-
 	numRcvdBytes = 0;
 	numLostMsgs = 0;
 
@@ -175,13 +173,12 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 
 #endif
 
-	//todo: return data length
 	if(numMsgsInBuffer == 0){
 		return TINYRF_ERR_NO_DATA;
 	}
 
-	//TINYRF_PRINT("len addr: ");TINYRF_PRINT(bufferReadIndex, DEC);
-	//TINYRF_PRINT(" - #msgs in buf: ");TINYRF_PRINT(numMsgsInBuffer);
+	// TINYRF_PRINT("len addr: ");TINYRF_PRINT2(bufferReadIndex, DEC);
+	// TINYRF_PRINT(" - #msgs in buf: ");TINYRF_PRINT(numMsgsInBuffer);
 
 	/* manage buffer */
 	//this is how our buffer looks like:
@@ -199,48 +196,46 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 		return TINYRF_ERR_NO_DATA;
 	}
 
-	//payloadLen is frame length minus the crc
-	//this also includes the seq# if available
+	uint8_t dataLen = frameLen;
+
 	#ifndef ERROR_CHECKING_NONE
-		uint8_t payloadLen = frameLen - 1;
-	#else
-		uint8_t payloadLen = frameLen;
+		dataLen--;
+		byte errChckRcvd = rcvdBytsBuf[bufferReadIndex];
+		bufferReadIndex++;
 	#endif
 
-	if(payloadLen > bufSize){
+	#ifndef TX_NO_SEQ
+		dataLen--;
+		uint8_t seq = rcvdBytsBuf[bufferReadIndex];
+		bufferReadIndex++;
+	#endif
+
+	numRcvdBytes = dataLen;
+
+	if(dataLen > bufSize){
 		return TINYRF_ERR_BUFFER_OVERFLOW;
 	}
 
-	//numRcvdBytes is actual datalen minus the crc and the sequence number
-	#ifndef TX_NO_SEQ
-		numRcvdBytes = payloadLen - 1;
-	#else
-		numRcvdBytes = payloadLen;
-	#endif
+	// TINYRF_PRINT(" - read index: ");TINYRF_PRINT2(bufferReadIndex, DEC);
+	// TINYRF_PRINT(" - len: ");TINYRF_PRINT(frameLen);
+	// TINYRF_PRINTLN("");
+	// for(int i=0; i<256; i++){
+	// 	TINYRF_PRINT(rcvdBytsBuf[i]);TINYRF_PRINT(",");
+	// }
+	// TINYRF_PRINTLN("");
 
-	//TINYRF_PRINT(" - read index: ");TINYRF_PRINT(bufferReadIndex, DEC);
-	//TINYRF_PRINT(" - len: ");TINYRF_PRINT(frameLen);
-	//TINYRF_PRINTLN("");
-	//for(int i=0; i<256; i++){
-	//	TINYRF_PRINT(rcvdBytsBuf[i]);TINYRF_PRINT(",");
-	//}
-	//TINYRF_PRINTLN("");
-
-	//copy the data from 'bufferReadIndex' until bufferReadIndex+payloadLen
-	//this also includes the seq# if available
-	for(int i=0; i<payloadLen; i++){
+	//copy the data from 'bufferReadIndex' until bufferReadIndex+dataLen
+	for(int i=0; i<dataLen; i++){
 		buf[i] = rcvdBytsBuf[bufferReadIndex++];
 	}
 
 	//error checking
 	#ifndef ERROR_CHECKING_NONE
-		byte errChckRcvd = rcvdBytsBuf[bufferReadIndex];
-		//move buffer pointer to next byte
-		bufferReadIndex++;
-		byte errChckCalc = ERROR_CHECKING(buf, payloadLen);
-
-		//TINYRF_PRINT("bufferReadIndex is now: ");TINYRF_PRINTLN(bufferReadIndex, DEC);
-
+		#ifndef TX_NO_SEQ
+			byte errChckCalc = ERR_CHK_FUNC(buf, dataLen, seq);
+		#else
+			byte errChckCalc = ERR_CHK_FUNC(buf, dataLen);
+		#endif
 		if(errChckRcvd != errChckCalc){
 			return TINYRF_ERR_BAD_CRC;
 		}
@@ -249,8 +244,7 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 	//sequence number
 	#ifndef TX_NO_SEQ
 
-		//last byte of data is sequence number
-		uint8_t seq = buf[payloadLen-1];
+		static int lastSeq = -2;
 
 		//if this is the first seq we receive
 		if(lastSeq == -2){

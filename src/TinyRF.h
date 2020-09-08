@@ -30,6 +30,20 @@
 	#define CALIB_ERROR 0
 #endif
 
+#ifndef TX_NO_SEQ
+	#if defined(ERROR_CHECKING_CRC)
+		#define ERR_CHK_FUNC crc8_seq
+	#elif defined(ERROR_CHECKING_CHECKSUM)
+		#define ERR_CHK_FUNC checksum8_seq
+	#endif
+#else
+	#if defined(ERROR_CHECKING_CRC)
+		#define ERR_CHK_FUNC crc8
+	#elif defined(ERROR_CHECKING_CHECKSUM)
+		#define ERR_CHK_FUNC checksum8
+	#endif
+#endif
+
 
 //data rate presets
 #ifdef BITRATE_240
@@ -85,6 +99,8 @@ const uint16_t START_PULSE_TRIGG_ERROR = (TRIGER_ERROR + START_PULSE_PERIOD * CA
 **/
 byte checksum8(byte data[], uint8_t len);
 byte crc8(byte data[], uint8_t len);
+byte checksum8_seq(byte data[], uint8_t len, uint8_t seq);
+byte crc8_seq(byte data[], uint8_t len, uint8_t seq);
 
 
 #endif  /* TINYRF_H */ 

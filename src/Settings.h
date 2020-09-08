@@ -18,8 +18,8 @@
  * It cannot recover the original data. So you still need to send a message multiple times to 
  * make sure it is received.
 **/
-#define ERROR_CHECKING crc8
-//#define ERROR_CHECKING checksum8
+#define ERROR_CHECKING_CRC
+//#define ERROR_CHECKING_CHECKSUM
 //#define ERROR_CHECKING_NONE
 
 
@@ -55,6 +55,15 @@
  * However Internet suggests much shorter times.
 **/
 #define BITRATE_1100
+
+/**
+ * Whether sequence numbering should be disabled
+ * It is enabled by default. Uncomment the below define to disable it.
+ * If enabled a sequence number will be attached to every message sent and in the receiver 
+ * the sequence number will be checked to determine if any messages have been lost
+ * The sequence number resets at 255 so if there's more than 255 messages lost we won't find out
+**/
+//#define TX_NO_SEQ
 
 
 /**
