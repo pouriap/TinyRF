@@ -15,7 +15,7 @@ namespace tinyrf{
 	volatile unsigned long rcvdPulses[8];
 	volatile uint8_t numMsgsInBuffer = 0;
 	volatile uint8_t msgAddrInBuf = 0;
-	volatile uint8_t msgLen = 0;
+	volatile uint8_t frameLen = 0;
 	//indicates where in the received bytes buffer to read next, used by getReceivedData()
 	uint8_t bufferReadIndex = 0;
 	uint8_t rxPin = 2;
@@ -58,8 +58,8 @@ inline void process_received_byte(){
 			//put the message length at the beggining of the message data in buffer
 			//increate numMsgsInBuffer
 			//increment bufIndex for holding the next message
-			if(msgLen>0){
-				rcvdBytsBuf[msgAddrInBuf] = msgLen;
+			if(frameLen>0){
+				rcvdBytsBuf[msgAddrInBuf] = frameLen;
 				numMsgsInBuffer++;
 				//if a message's length is 0, then this block will not run and bufIndex will stay
 				//the same and next msg will be written over it
@@ -75,9 +75,9 @@ inline void process_received_byte(){
 	//we have received one bytes of data
 	//add it to the buffer
 	//increment bufIndex
-	//increment msgLen
+	//increment frameLen
 	rcvdBytsBuf[++bufIndex] = receivedData;
-	msgLen++;
+	frameLen++;
 	return;
 
 }
@@ -113,14 +113,14 @@ void interrupt_routine(){
 		//this prevents a curropted buffer where length will be zero because transmission was never finished
 		//todo: or perhaps we should just ignore these messages because they're useless
 		if(transmitOngoing){
-			rcvdBytsBuf[msgAddrInBuf] = msgLen;
+			rcvdBytsBuf[msgAddrInBuf] = frameLen;
 			numMsgsInBuffer++;
 			bufIndex++;
 		}
 		transmitOngoing = true;
 		pulse_count = 0;
 		msgAddrInBuf = bufIndex;
-		msgLen = 0;
+		frameLen = 0;
 	}
 	else if(transmitOngoing){
 		rcvdPulses[pulse_count] = pulsePeriod;
@@ -138,13 +138,14 @@ void interrupt_routine(){
 }
 
 
-uint8_t getReceivedData(byte buf[], uint8_t &lostMsgs){
+uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint8_t &numLostMsgs){
 
 	using namespace tinyrf;
 
 	static int lastSeq = -2;
 
-	lostMsgs = 0;
+	numRcvdBytes = 0;
+	numLostMsgs = 0;
 
 	//we rely on noise to detect end of transmission
 	//in the rare event that there was no noise(the interrupt did not trigger) for a long time
@@ -164,7 +165,7 @@ uint8_t getReceivedData(byte buf[], uint8_t &lostMsgs){
 			//transmission has stopped. also this is quite short
 			detachInterrupt(digitalPinToInterrupt(rxPin));
 			transmitOngoing = false;
-			rcvdBytsBuf[msgAddrInBuf] = msgLen;
+			rcvdBytsBuf[msgAddrInBuf] = frameLen;
 			numMsgsInBuffer++;
 			bufIndex++;
 			attachInterrupt(digitalPinToInterrupt(rxPin), interrupt_routine, FALLING);
@@ -184,38 +185,49 @@ uint8_t getReceivedData(byte buf[], uint8_t &lostMsgs){
 	/* manage buffer */
 	//this is how our buffer looks like:
 	//[msg0 len|msg0 byte0|msg0 byte1|...|msg0 crc|msg1 len|msg1 byte0|msg1 byte1|msg1 crc|...]
-	//message length = data length + error checking byte
-	//bufferReadIndex points to the first byte of message, i.e. the length
-	uint8_t msgLen = rcvdBytsBuf[bufferReadIndex];
+	//frame length = data length + seq# + error checking byte
+	//bufferReadIndex points to the first byte of frame, i.e. the length
+	uint8_t frameLen = rcvdBytsBuf[bufferReadIndex];
 	//move buffer pointer one byte further
 	//after this bufferReadIndex points to the first byte of the actual data
 	bufferReadIndex++;
 	//we consider this message processed as of now
 	numMsgsInBuffer--;
 	//if message's length is zero then we don't need to do anything more
-	if(msgLen == 0){
+	if(frameLen == 0){
 		return TINYRF_ERR_NO_DATA;
 	}
 
-	//dataLen is the actual data, i.e. minus the CRC (if available)
+	//payloadLen is frame length minus the crc
 	//this also includes the seq# if available
 	#ifndef ERROR_CHECKING_NONE
-		uint8_t dataLen = msgLen - 1;
+		uint8_t payloadLen = frameLen - 1;
 	#else
-		uint8_t dataLen = msgLen;
+		uint8_t payloadLen = frameLen;
+	#endif
+
+	if(payloadLen > bufSize){
+		return TINYRF_ERR_BUFFER_OVERFLOW;
+	}
+
+	//numRcvdBytes is actual datalen minus the crc and the sequence number
+	#ifndef TX_NO_SEQ
+		numRcvdBytes = payloadLen - 1;
+	#else
+		numRcvdBytes = payloadLen;
 	#endif
 
 	//TINYRF_PRINT(" - read index: ");TINYRF_PRINT(bufferReadIndex, DEC);
-	//TINYRF_PRINT(" - len: ");TINYRF_PRINT(msgLen);
+	//TINYRF_PRINT(" - len: ");TINYRF_PRINT(frameLen);
 	//TINYRF_PRINTLN("");
 	//for(int i=0; i<256; i++){
 	//	TINYRF_PRINT(rcvdBytsBuf[i]);TINYRF_PRINT(",");
 	//}
 	//TINYRF_PRINTLN("");
 
-	//copy the data from 'bufferReadIndex' until bufferReadIndex+dataLen
-	//this also copies the seq# if available
-	for(int i=0; i<dataLen; i++){
+	//copy the data from 'bufferReadIndex' until bufferReadIndex+payloadLen
+	//this also includes the seq# if available
+	for(int i=0; i<payloadLen; i++){
 		buf[i] = rcvdBytsBuf[bufferReadIndex++];
 	}
 
@@ -224,13 +236,14 @@ uint8_t getReceivedData(byte buf[], uint8_t &lostMsgs){
 		byte errChckRcvd = rcvdBytsBuf[bufferReadIndex];
 		//move buffer pointer to next byte
 		bufferReadIndex++;
-		byte errChckCalc = ERROR_CHECKING(buf, dataLen);
+		byte errChckCalc = ERROR_CHECKING(buf, payloadLen);
 
 		//TINYRF_PRINT("bufferReadIndex is now: ");TINYRF_PRINTLN(bufferReadIndex, DEC);
 
 		if(errChckRcvd != errChckCalc){
 			TINYRF_PRINT("BAD CRC: [");TINYRF_PRINT((char*)buf);TINYRF_PRINTLN("]");
-			TINYRF_PRINT("crcRcvd: ");TINYRF_PRINT2(errChckRcvd, HEX);TINYRF_PRINT(" crcCalc: ");TINYRF_PRINT2(errChckCalc, HEX);TINYRF_PRINT(" len: ");TINYRF_PRINTLN(dataLen);
+			TINYRF_PRINT("crcRcvd: ");TINYRF_PRINT2(errChckRcvd, HEX);TINYRF_PRINT(" crcCalc: ");
+			TINYRF_PRINT2(errChckCalc, HEX);TINYRF_PRINT(" len: ");TINYRF_PRINTLN(payloadLen);
 			return TINYRF_ERR_BAD_CRC;
 		}
 	#endif
@@ -239,7 +252,7 @@ uint8_t getReceivedData(byte buf[], uint8_t &lostMsgs){
 	#ifndef TX_NO_SEQ
 
 		//last byte of data is sequence number
-		uint8_t seq = buf[dataLen-1];
+		uint8_t seq = buf[payloadLen-1];
 
 		//if this is the first seq we receive
 		if(lastSeq == -2){
@@ -252,11 +265,11 @@ uint8_t getReceivedData(byte buf[], uint8_t &lostMsgs){
 		}
 
 		if(seq > lastSeq+1){
-			lostMsgs = seq - lastSeq - 1;
+			numLostMsgs = seq - lastSeq - 1;
 		}
 		else{
 			//seq is smaller than lastseq meaning seq was reset during lost messages
-			lostMsgs = 255 - lastSeq + seq;
+			numLostMsgs = 255 - lastSeq + seq;
 		}
 
 		if(seq == 255){
@@ -267,7 +280,7 @@ uint8_t getReceivedData(byte buf[], uint8_t &lostMsgs){
 			lastSeq = seq;
 		}
 
-		if(lostMsgs != 0){
+		if(numLostMsgs != 0){
 			return TINYRF_ERR_MSGS_LOST;
 		}
 
@@ -277,7 +290,7 @@ uint8_t getReceivedData(byte buf[], uint8_t &lostMsgs){
 
 }
 
-uint8_t getReceivedData(byte buf[]){
+uint8_t getReceivedData(byte buf[],  uint8_t bufSize, uint8_t &numRcvdBytes){
 	uint8_t l = 0;
-	return getReceivedData(buf, l);
+	return getReceivedData(buf, bufSize, numRcvdBytes, l);
 }
