@@ -68,12 +68,11 @@
 /**
  * This isn't used anywhere in the library. It is defined here for reference and for being used
  * as buffer size in programs that use this library.
- * Do not increase this above 255, because all data types related to messages are uint8_t so 
- * increasing this will break the program.
+ * Do not increase this value!
  * Even tho sending messages of this length is theoretically possible, it is not recommended to 
  * send anything larger thatn 128 bit due to noise.
 **/
-#define MAX_MSG_LEN 255
+#define MAX_MSG_LEN 250	//250 to account for CRC, seq# and any other trailer we might add later
 
 
 #endif	/* TINYRF_SETTINGS_H */

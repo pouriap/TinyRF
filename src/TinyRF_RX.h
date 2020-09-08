@@ -8,6 +8,7 @@
 const uint8_t TINYRF_ERR_NO_DATA = 0;
 const uint8_t TINYRF_ERR_BAD_CRC = 1;
 const uint8_t TINYRF_ERR_SUCCESS = 2;
+const uint8_t TINYRF_ERR_MSGS_LOST = 3;
 
 
 /**
@@ -22,7 +23,8 @@ const uint16_t RX_BUFFER_SIZE = 256;
 **/
 void setupReceiver(uint8_t pin);
 void interrupt_routine();
-byte getReceivedData(byte buf[]);
+uint8_t getReceivedData(byte buf[], uint8_t &lostMsgs);
+uint8_t getReceivedData(byte buf[]);
 
 
 #endif	/* TINYRF_RX_H */

@@ -16,6 +16,20 @@ void setupTransmitter(){
 **/
 void send(byte* data, uint8_t len){
 
+	static uint8_t seq = 0;
+
+	#ifndef TX_NO_SEQ
+	//put the seq# at the end of the data, so it will be included in crc checking
+	//the user has to set the data length using the TINYRF_DATA_LEN() macro
+	//the macro will automatically add 1 to the data length if sequence numbering is enabled
+	data[len-1] = seq;
+	//sequence will automatically reset back to 0 
+	//on the receiver side we only want to know how many messages we have lost
+	//chances of more than 254 messages being lost is pretty low so we stick with a 8bit 
+	//sequence number to preserver program space
+	seq++;
+	#endif
+
 	//we calculate the crc here, because if we do it after the transmission has started 
 	//it will create a delay during transmission which causes the receiver to lose accuracy
 	#ifndef ERROR_CHECKING_NONE

@@ -138,9 +138,13 @@ void interrupt_routine(){
 }
 
 
-byte getReceivedData(byte buf[]){
+uint8_t getReceivedData(byte buf[], uint8_t &lostMsgs){
 
 	using namespace tinyrf;
+
+	static int lastSeq = -2;
+
+	lostMsgs = 0;
 
 	//we rely on noise to detect end of transmission
 	//in the rare event that there was no noise(the interrupt did not trigger) for a long time
@@ -169,6 +173,7 @@ byte getReceivedData(byte buf[]){
 
 #endif
 
+	//todo: return data length
 	if(numMsgsInBuffer == 0){
 		return TINYRF_ERR_NO_DATA;
 	}
@@ -193,6 +198,7 @@ byte getReceivedData(byte buf[]){
 	}
 
 	//dataLen is the actual data, i.e. minus the CRC (if available)
+	//this also includes the seq# if available
 	#ifndef ERROR_CHECKING_NONE
 		uint8_t dataLen = msgLen - 1;
 	#else
@@ -208,6 +214,7 @@ byte getReceivedData(byte buf[]){
 	//TINYRF_PRINTLN("");
 
 	//copy the data from 'bufferReadIndex' until bufferReadIndex+dataLen
+	//this also copies the seq# if available
 	for(int i=0; i<dataLen; i++){
 		buf[i] = rcvdBytsBuf[bufferReadIndex++];
 	}
@@ -228,7 +235,49 @@ byte getReceivedData(byte buf[]){
 		}
 	#endif
 
+	//sequence number
+	#ifndef TX_NO_SEQ
+
+		//last byte of data is sequence number
+		uint8_t seq = buf[dataLen-1];
+
+		//if this is the first seq we receive
+		if(lastSeq == -2){
+			lastSeq = seq;
+			return TINYRF_ERR_SUCCESS;
+		}
+		else if(seq == lastSeq){
+			//**** repeated message
+			return TINYRF_ERR_SUCCESS;
+		}
+
+		if(seq > lastSeq+1){
+			lostMsgs = seq - lastSeq - 1;
+		}
+		else{
+			//seq is smaller than lastseq meaning seq was reset during lost messages
+			lostMsgs = 255 - lastSeq + seq;
+		}
+
+		if(seq == 255){
+			//because next valid seq will be 0 
+			lastSeq = -1;
+		}
+		else{
+			lastSeq = seq;
+		}
+
+		if(lostMsgs != 0){
+			return TINYRF_ERR_MSGS_LOST;
+		}
+
+	#endif
+
 	return TINYRF_ERR_SUCCESS;
 
 }
 
+uint8_t getReceivedData(byte buf[]){
+	uint8_t l = 0;
+	return getReceivedData(buf, l);
+}

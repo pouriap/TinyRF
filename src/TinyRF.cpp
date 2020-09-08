@@ -1,6 +1,23 @@
 #include "TinyRF.h"
 
 //todo: receiver is very sensitive to preamble, and in higher data rates we need more preable
+//todo: sometimes getreceivedata() gives blank string, specially when we are sending fast (1ms delay between sends)
+/* whit this code in receiver:
+void loop(){
+  char buf[MAX_MSG_LEN];
+  for(int i=0; i<MAX_MSG_LEN; i++){
+	  buf[i] = '\0';
+  }
+  uint8_t err = getReceivedData(buf);
+  if(err == TINYRF_ERR_SUCCESS){
+	  TINYRF_PRINTLN(buf);
+  }
+  if(err != TINYRF_ERR_NO_DATA){
+  	TINYRF_PRINTLN("---------------------------------");
+  }
+}
+
+*/
 
 /*
 notes:
