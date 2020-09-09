@@ -2,7 +2,7 @@
 
 An Arduino library for using generic 315MHz / 433MHz RF modules with ATtiny13 as transmitter.
 
-![433MHz / 315MHz cheap ebay RF modules](https://i.imgur.com/3bveaOp.jpg)
+![433MHz / 315MHz cheap ebay RF modules](https://repository-images.githubusercontent.com/293609741/4b910480-f297-11ea-96e6-fd41628b4086)
 
 ## Features
 * Built-in error checking
@@ -101,7 +101,7 @@ void loop(){
 ## How to change settings:
 Transmitter pin number and other settings are defined in `Settings.h` instead of being set programatically in order to save program space. To find out which settings are available and what they do take a look at `Settings.h`. 
 
-## Why did you make this library:
+## Why make this library:
 These generic 315MHz / 433MHz RF modules are cheap. The ATtiny13 is cheap. Why not use them together to make a cheap yet reliable system? 
 
-With the built-in error checking and sequence numbering you can make sure your packets arrive untouched. This is useful when you need to send small amounts of data using the least amount of power and resources. For example an station that measures soil moisture on regular intervals and sends it to the central receiver. I couldn't find anything library that was both reliable and small enough to fit in an ATtiny, so I wrote one.
+I needed a reliable system to send soil moisture data from different "stations" to a central Arduino receiver. The station needed to be as cheap as possible and use as little power as possible, so ATtiny13 was the  choice. The problem was available libraries were either too big to fit in the tiny or were unreliable. So I wrote my own library with build-in error checking and sequence numbering and ability to send messages longer than 128bits. It's very useful for microcontrollers that have limited storage.
