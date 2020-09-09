@@ -78,6 +78,13 @@ void send(byte* data, uint8_t len){
 
 }
 
+void send(byte data[], uint8_t len, uint8_t times){
+	for(uint8_t i=0; i<times; i++){
+		send(data, len);
+		delayMicroseconds(START_PULSE_PERIOD * 4);
+	}
+}
+
 //sends one byte
 void transmitByte(byte _byte){
 	for(uint8_t i=0; i<8; i++){

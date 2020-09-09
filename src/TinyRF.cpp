@@ -1,5 +1,6 @@
 #include "TinyRF.h"
 
+//todo: try different CPU speeds
 //todo: receiver is very sensitive to preamble, and in higher data rates we need more preable
 //todo: sometimes getreceivedata() gives blank string, specially when we are sending fast (1ms delay between sends)
 /* whit this code in receiver:

@@ -3,12 +3,17 @@
 
 #include "TinyRF.h"
 
-
+//todo: add TINYRF_ to all global variables and defines or add them to namespace
 //Constants
-const uint8_t TINYRF_ERR_NO_DATA = 0;
-const uint8_t TINYRF_ERR_BAD_CRC = 1;
-const uint8_t TINYRF_ERR_SUCCESS = 2;
+const uint8_t TINYRF_ERR_SUCCESS = 0;
+const uint8_t TINYRF_ERR_NO_DATA = 1;
+const uint8_t TINYRF_ERR_BAD_CRC = 2;
 const uint8_t TINYRF_ERR_BUFFER_OVERFLOW = 3;
+//only define this constant if ERROR_CHECKING_NONE is not defined so that user will get an error
+//when they try to use this in their code with error checking disabled
+#ifndef ERROR_CHECKING_NONE
+const uint8_t TINYRF_ERR_DUPLICATE_MSG = 4;
+#endif
 
 
 /**

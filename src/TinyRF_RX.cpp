@@ -252,8 +252,12 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 			return TINYRF_ERR_SUCCESS;
 		}
 		else if(seq == lastSeq){
-			//**** repeated message
-			return TINYRF_ERR_SUCCESS;
+			//we can only rely on seq# for detecting duplicates if we have error checking
+			#ifndef ERROR_CHECKING_NONE
+				return TINYRF_ERR_DUPLICATE_MSG;
+			#else
+				return TINYRF_ERR_SUCCESS;
+			#endif
 		}
 
 		if(seq > lastSeq+1){
