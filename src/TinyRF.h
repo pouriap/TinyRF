@@ -32,18 +32,10 @@
 #endif
 
 
-#ifndef TRF_SEQ_DISABLED
-	#if defined(TRF_ERROR_CHECKING_CRC)
-		#define TRF_ERR_CHK_FUNC crc8_seq
-	#elif defined(TRF_ERROR_CHECKING_CHECKSUM)
-		#define TRF_ERR_CHK_FUNC checksum8_seq
-	#endif
-#else
-	#if defined(TRF_ERROR_CHECKING_CRC)
-		#define TRF_ERR_CHK_FUNC crc8
-	#elif defined(TRF_ERROR_CHECKING_CHECKSUM)
-		#define TRF_ERR_CHK_FUNC checksum8
-	#endif
+#if defined(TRF_ERROR_CHECKING_CRC)
+	#define TRF_ERR_CHK_FUNC crc8
+#elif defined(TRF_ERROR_CHECKING_CHECKSUM)
+	#define TRF_ERR_CHK_FUNC checksum8
 #endif
 
 
@@ -52,7 +44,10 @@
  * as buffer size in programs that use this library.
  * Do not increase this value!
  * Even tho sending messages of this length is theoretically possible, it is not recommended to 
- * send anything larger thatn 128 bit due to noise.
+ * send anything larger than 32 bytes. The longer a message is the more susceptible to noise it become
+ * On top of that, the CRC function will become weaker and weaker as the message length increases
+ * Also it will take more time to calculate the CRC, increasing transmission time and bugging down
+ * the receiver CPU
 **/
 #define TRF_MAX_MSG_LEN 250	//250 to account for CRC, seq# and any other trailer we might add later
 
@@ -109,10 +104,8 @@ const uint16_t START_PULSE_TRIGG_ERROR = (TRIGER_ERROR + START_PULSE_PERIOD * TR
 /**
  * Function declarations
 **/
-byte checksum8(byte data[], uint8_t len);
-byte crc8(byte data[], uint8_t len);
-byte checksum8_seq(byte data[], uint8_t len, uint8_t seq);
-byte crc8_seq(byte data[], uint8_t len, uint8_t seq);
+byte checksum8(byte data[], uint8_t len, uint8_t seq = 0);
+byte crc8(byte data[], uint8_t len, uint8_t seq = 0);
 
 
 #endif  /* TRF_H */ 

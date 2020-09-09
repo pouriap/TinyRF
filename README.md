@@ -10,7 +10,7 @@ An Arduino library for using generic 315MHz / 433MHz RF modules with ATtiny13 as
 * Data transmission speeds up to 1000bps (2500bps with calibrated clock)
 * Up to 255 byte message length
 * Ability to disable features in order to preserve memory space
-* Relatively small memory footprint (~300bytes FLASH, 5bytes RAM with all features enabled)
+* Relatively small memory footprint (~270bytes FLASH, 5bytes RAM with all features enabled)
 
 **Transmitter MCU support:** ATtiny13 or any other AVR microcontroller you can program with Arduino IDE.
 
