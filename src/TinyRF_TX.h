@@ -1,5 +1,5 @@
-#ifndef TINYRF_TX_H
-#define TINYRF_TX_H
+#ifndef TRF_TX_H
+#define TRF_TX_H
 
 #include "TinyRF.h"
 
@@ -10,4 +10,4 @@ void send(byte data[], uint8_t len, uint8_t times);
 void transmitByte(byte _byte);
 
 
-#endif	/* TINYRF_TX_H */
+#endif	/* TRF_TX_H */

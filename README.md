@@ -35,7 +35,7 @@ void loop(){
 	send((byte*)msg, strlen(msg));
 	//alternatively you can provide a third argument to send a message multiple times
 	//this is for reliability in case some messages get lost in the way
-	//if you have error checking and sequence numbering enabled the getReceivedData() function will return TINYRF_ERR_DUPLICATE_MSG when receiving a duplicate, making it easy to ignore duplicates
+	//if you have error checking and sequence numbering enabled the getReceivedData() function will return TRF_ERR_DUPLICATE_MSG when receiving a duplicate, making it easy to ignore duplicates
 	//it is socially more responsible to use fewer repetition to minimize your usage of the bandwidth
 	//send((byte*)msg, strlen(msg), 10);
 	delay(1000);	//make sure there's at least a 10ms delay between transmissions
@@ -55,31 +55,31 @@ void setup(){
 
 void loop(){
 
-	const unsigned int bufSize = 30;
+	const uint8_t bufSize = 30;
 	byte buf[bufSize];
-	unsigned char numLostMsgs = 0;
-	unsigned char numRcvdBytes = 0;
+	uint8_t numLostMsgs = 0;
+	uint8_t numRcvdBytes = 0;
 	//number of received bytes will be put in numRcvdBytes
 	//if sequence numbering is enabled the number of lost messages will be put in numLostMsgs
 	//if you have disabled sequence numbering or don't need number of lost messages you can omit this argument
-	int err = getReceivedData(buf, bufSize, numRcvdBytes, numLostMsgs);
+	uint8_t err = getReceivedData(buf, bufSize, numRcvdBytes, numLostMsgs);
 
-	if(err == TINYRF_ERR_NO_DATA){
+	if(err == TRF_ERR_NO_DATA){
 		return;
 	}
 
-	if(err == TINYRF_ERR_BUFFER_OVERFLOW){
+	if(err == TRF_ERR_BUFFER_OVERFLOW){
 		Serial.println("Buffer too small for received data!");
 		return;
 	}
 
-	if(err == TINYRF_ERR_BAD_CRC){
+	if(err == TRF_ERR_BAD_CRC){
 		Serial.println("Received data curropted.");
 		return;
 	}
 
 	//this will only work if error checking and sequence numbering are enabled
-	if(err == TINYRF_ERR_DUPLICATE_MSG){
+	if(err == TRF_ERR_DUPLICATE_MSG){
 		Serial.println("Duplicate message.");
 		return;
 	}

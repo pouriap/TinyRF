@@ -1,7 +1,7 @@
 #include "TinyRF_TX.h"
 
 void setupTransmitter(){
-	pinMode(txPin, OUTPUT);
+	pinMode(TRF_TX_PIN, OUTPUT);
 }
 
 /**
@@ -16,17 +16,17 @@ void setupTransmitter(){
 **/
 void send(byte* data, uint8_t len){
 
-	#ifndef TX_NO_SEQ
+	#ifndef TRF_SEQ_DISABLED
 		static uint8_t seq = 0;
 	#endif
 
 	//we calculate the crc here, because if we do it after the transmission has started 
 	//it will create a delay during transmission which causes the receiver to lose accuracy
-	#ifndef ERROR_CHECKING_NONE
-		#ifndef TX_NO_SEQ
-			byte errChck = ERR_CHK_FUNC(data, len, seq);
+	#ifndef TRF_ERROR_CHECKING_NONE
+		#ifndef TRF_SEQ_DISABLED
+			byte errChck = TRF_ERR_CHK_FUNC(data, len, seq);
 		#else
-			byte errChck = ERR_CHK_FUNC(data, len);
+			byte errChck = TRF_ERR_CHK_FUNC(data, len);
 		#endif
 	#endif
 
@@ -38,18 +38,18 @@ void send(byte* data, uint8_t len){
 	}
 
 	//START pulse
-	digitalWrite(txPin, LOW);
+	digitalWrite(TRF_TX_PIN, LOW);
 	delayMicroseconds(START_PULSE_PERIOD - PERIOD_HIGH_DURATION);
-	digitalWrite(txPin, HIGH);
+	digitalWrite(TRF_TX_PIN, HIGH);
 	delayMicroseconds(PERIOD_HIGH_DURATION - 4);	//-4 because digitalWrite takes ~4us
 
 	//error checking byte
-	#ifndef ERROR_CHECKING_NONE
+	#ifndef TRF_ERROR_CHECKING_NONE
 	transmitByte(errChck);
 	#endif
 
 	//sequence number
-	#ifndef TX_NO_SEQ
+	#ifndef TRF_SEQ_DISABLED
 	transmitByte(seq++);
 	#endif
 
@@ -60,19 +60,19 @@ void send(byte* data, uint8_t len){
 
 	//reset the line to LOW so receiver detects last pulse
 	//because receiver uses falling edges to detect pulses
-	digitalWrite(txPin, LOW);
+	digitalWrite(TRF_TX_PIN, LOW);
 	
 	//receiver relies on noise to detect end of transmission, 
 	//so we send it some artificial noise to "announce" end of transmission
 	//be careful choosing this because when we're here receiver is expecting a byte not a start pulse
 	//so it's more sensitive
 	//we really need 8 to fill the rcvdPulses[] buffer, but we send 10 just to be sure
-#if defined(EOT_IN_TX) && !defined(EOT_NONE)
+#if defined(TRF_EOT_IN_TX) && !defined(TRF_EOT_NONE)
 	for(uint8_t i=0; i<10; i++){
 		delayMicroseconds(PERIOD_HIGH_DURATION/2);
-		digitalWrite(txPin, HIGH);
+		digitalWrite(TRF_TX_PIN, HIGH);
 		delayMicroseconds(PERIOD_HIGH_DURATION/2);
-		digitalWrite(txPin, LOW);
+		digitalWrite(TRF_TX_PIN, LOW);
 	}
 #endif
 
@@ -90,7 +90,7 @@ void transmitByte(byte _byte){
 	for(uint8_t i=0; i<8; i++){
 		//send the LOW part of the pulse
 		//the LOW duration determines wether a pulse is a 1 or a 0
-		digitalWrite(txPin, LOW);
+		digitalWrite(TRF_TX_PIN, LOW);
 		//if 1
 		if(_byte & (1<<i)){
 			delayMicroseconds(ONE_PULSE_PERIOD - PERIOD_HIGH_DURATION);
@@ -100,7 +100,7 @@ void transmitByte(byte _byte){
 		}
 		//send the HIGH part of the pulse
 		//all pulses have the same HIGH duration
-		digitalWrite(txPin, HIGH);
+		digitalWrite(TRF_TX_PIN, HIGH);
 		delayMicroseconds(PERIOD_HIGH_DURATION - 4);
 	}
 }

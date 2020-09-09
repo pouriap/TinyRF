@@ -2,8 +2,7 @@
 
 namespace tinyrf{
 
-	//todo: somtimes getReceivedData() returned empty buffer with TINYRF_ERR_SUCCESS
-	//todo: optimize variable types
+	//todo: somtimes getReceivedData() returned empty buffer with TRF_ERR_SUCCESS
 
 	volatile bool transmitOngoing = false;
 	//set to true every time interrupt runs, used to determine when data hasn't come in for a long time
@@ -11,7 +10,7 @@ namespace tinyrf{
 	//index of rcvdBytsBuf to put the next byte in
 	volatile uint8_t bufIndex = 0;
 	//buffer for received bytes
-	byte rcvdBytsBuf[RX_BUFFER_SIZE];
+	byte rcvdBytsBuf[TRF_RX_BUFFER_SIZE];
 	//buffer for received pulses(bits)
 	volatile unsigned long rcvdPulses[8];
 	volatile uint8_t numMsgsInBuffer = 0;
@@ -53,7 +52,7 @@ inline void process_received_byte(){
 			//this is noise = end of transmission
 			transmitOngoing = false;
 
-			//TINYRF_PRINTLN("");
+			//TRF_PRINTLN("");
 
 			//the transmission has ended
 			//put the message length at the beggining of the message data in buffer
@@ -71,7 +70,7 @@ inline void process_received_byte(){
 		}
 	}
 
-	//TINYRF_PRINT((char)receivedData);
+	//TRF_PRINT((char)receivedData);
 
 	//we have received one bytes of data
 	//add it to the buffer
@@ -102,7 +101,7 @@ void interrupt_routine(){
 	unsigned long pulsePeriod = time - lastTime;
 	lastTime = time;
 
-	//TINYRF_PRINTLN(pulsePeriod);
+	//TRF_PRINTLN(pulsePeriod);
 	
 	//start of transmission
 	if( 
@@ -129,12 +128,11 @@ void interrupt_routine(){
 	}
 
 	if(pulse_count == 8){
-		//todo: this doesn't need return type
 		process_received_byte();
 		pulse_count = 0;
 	}
 
-	//TINYRF_PRINTLN(micros() - time);
+	//TRF_PRINTLN(micros() - time);
 
 }
 
@@ -149,7 +147,7 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 	//we rely on noise to detect end of transmission
 	//in the rare event that there was no noise(the interrupt did not trigger) for a long time
 	//consider the transmission over and add received data to buffer
-#if !defined(EOT_IN_TX) && !defined(EOT_NONE)
+#if !defined(TRF_EOT_IN_TX) && !defined(TRF_EOT_NONE)
 
 	static unsigned long lastInterruptRun = 0;
 	unsigned long time = micros();
@@ -174,11 +172,11 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 #endif
 
 	if(numMsgsInBuffer == 0){
-		return TINYRF_ERR_NO_DATA;
+		return TRF_ERR_NO_DATA;
 	}
 
-	// TINYRF_PRINT("len addr: ");TINYRF_PRINT2(bufferReadIndex, DEC);
-	// TINYRF_PRINT(" - #msgs in buf: ");TINYRF_PRINT(numMsgsInBuffer);
+	// TRF_PRINT("len addr: ");TRF_PRINT2(bufferReadIndex, DEC);
+	// TRF_PRINT(" - #msgs in buf: ");TRF_PRINT(numMsgsInBuffer);
 
 	/* manage buffer */
 	//this is how our buffer looks like:
@@ -193,18 +191,18 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 	numMsgsInBuffer--;
 	//if message's length is zero then we don't need to do anything more
 	if(frameLen == 0){
-		return TINYRF_ERR_NO_DATA;
+		return TRF_ERR_NO_DATA;
 	}
 
 	uint8_t dataLen = frameLen;
 
-	#ifndef ERROR_CHECKING_NONE
+	#ifndef TRF_ERROR_CHECKING_NONE
 		dataLen--;
 		byte errChckRcvd = rcvdBytsBuf[bufferReadIndex];
 		bufferReadIndex++;
 	#endif
 
-	#ifndef TX_NO_SEQ
+	#ifndef TRF_SEQ_DISABLED
 		dataLen--;
 		uint8_t seq = rcvdBytsBuf[bufferReadIndex];
 		bufferReadIndex++;
@@ -213,50 +211,50 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 	numRcvdBytes = dataLen;
 
 	if(dataLen > bufSize){
-		return TINYRF_ERR_BUFFER_OVERFLOW;
+		return TRF_ERR_BUFFER_OVERFLOW;
 	}
 
-	// TINYRF_PRINT(" - read index: ");TINYRF_PRINT2(bufferReadIndex, DEC);
-	// TINYRF_PRINT(" - len: ");TINYRF_PRINT(frameLen);
-	// TINYRF_PRINTLN("");
+	// TRF_PRINT(" - read index: ");TRF_PRINT2(bufferReadIndex, DEC);
+	// TRF_PRINT(" - len: ");TRF_PRINT(frameLen);
+	// TRF_PRINTLN("");
 	// for(int i=0; i<256; i++){
-	// 	TINYRF_PRINT(rcvdBytsBuf[i]);TINYRF_PRINT(",");
+	// 	TRF_PRINT(rcvdBytsBuf[i]);TRF_PRINT(",");
 	// }
-	// TINYRF_PRINTLN("");
+	// TRF_PRINTLN("");
 
 	//copy the data from 'bufferReadIndex' until bufferReadIndex+dataLen
-	for(int i=0; i<dataLen; i++){
+	for(uint8_t i=0; i<dataLen; i++){
 		buf[i] = rcvdBytsBuf[bufferReadIndex++];
 	}
 
 	//error checking
-	#ifndef ERROR_CHECKING_NONE
-		#ifndef TX_NO_SEQ
-			byte errChckCalc = ERR_CHK_FUNC(buf, dataLen, seq);
+	#ifndef TRF_ERROR_CHECKING_NONE
+		#ifndef TRF_SEQ_DISABLED
+			byte errChckCalc = TRF_ERR_CHK_FUNC(buf, dataLen, seq);
 		#else
-			byte errChckCalc = ERR_CHK_FUNC(buf, dataLen);
+			byte errChckCalc = TRF_ERR_CHK_FUNC(buf, dataLen);
 		#endif
 		if(errChckRcvd != errChckCalc){
-			return TINYRF_ERR_BAD_CRC;
+			return TRF_ERR_BAD_CRC;
 		}
 	#endif
 
 	//sequence number
-	#ifndef TX_NO_SEQ
+	#ifndef TRF_SEQ_DISABLED
 
 		static int lastSeq = -2;
 
 		//if this is the first seq we receive
 		if(lastSeq == -2){
 			lastSeq = seq;
-			return TINYRF_ERR_SUCCESS;
+			return TRF_ERR_SUCCESS;
 		}
 		else if(seq == lastSeq){
 			//we can only rely on seq# for detecting duplicates if we have error checking
-			#ifndef ERROR_CHECKING_NONE
-				return TINYRF_ERR_DUPLICATE_MSG;
+			#ifndef TRF_ERROR_CHECKING_NONE
+				return TRF_ERR_DUPLICATE_MSG;
 			#else
-				return TINYRF_ERR_SUCCESS;
+				return TRF_ERR_SUCCESS;
 			#endif
 		}
 
@@ -268,7 +266,7 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 			numLostMsgs = 255 - lastSeq + seq;
 		}
 
-		TINYRF_PRINT(seq);TINYRF_PRINT(":");
+		TRF_PRINT(seq);TRF_PRINT(":");
 
 		if(seq == 255){
 			//because next valid seq will be 0 
@@ -280,7 +278,7 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 
 	#endif
 
-	return TINYRF_ERR_SUCCESS;
+	return TRF_ERR_SUCCESS;
 
 }
 

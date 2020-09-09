@@ -5,16 +5,16 @@
 //todo: sometimes getreceivedata() gives blank string, specially when we are sending fast (1ms delay between sends)
 /* whit this code in receiver:
 void loop(){
-  char buf[MAX_MSG_LEN];
-  for(int i=0; i<MAX_MSG_LEN; i++){
+  char buf[TRF_MAX_MSG_LEN];
+  for(int i=0; i<TRF_MAX_MSG_LEN; i++){
 	  buf[i] = '\0';
   }
   uint8_t err = getReceivedData(buf);
-  if(err == TINYRF_ERR_SUCCESS){
-	  TINYRF_PRINTLN(buf);
+  if(err == TRF_ERR_SUCCESS){
+	  TRF_PRINTLN(buf);
   }
-  if(err != TINYRF_ERR_NO_DATA){
-  	TINYRF_PRINTLN("---------------------------------");
+  if(err != TRF_ERR_NO_DATA){
+  	TRF_PRINTLN("---------------------------------");
   }
 }
 
