@@ -84,9 +84,13 @@ inline void process_received_byte(){
 
 /**
  * Interrupt routine called on falling edges of pulses
- * We measure a pulse's period to determine wheter it is a START, 1 or 0 pulse
- * this interrupt routine usually take 8us - sometimes goes up to 30us
- * with our 100+us pulse periods this shouldn't be a problem
+ * We use a pulse period encoding to determine what a pulse means
+ * As suggested here: http://www.romanblack.com/RF/cheapRFmodules.htm
+ * This way we will have both HIGH and LOW periods in both 1 and 0 bits, eliminating 
+ * the need for manchester encoding and other workarounds for sending equal HIGH and LOW
+ * Pulse periods are defined in the file TinyRF.h
+ * This interrupt routine usually take 8us - sometimes goes up to 30us
+ * With our 100+us pulse periods this shouldn't be a problem
 **/
 void interrupt_routine(){
 
@@ -180,12 +184,11 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 
 	/* manage buffer */
 	//this is how our buffer looks like:
-	//[msg0 len|msg0 byte0|msg0 byte1|...|msg0 crc|msg1 len|msg1 byte0|msg1 byte1|msg1 crc|...]
+	//[msg0 len|msg0 crc|msg0 seq#|msg0 byte0|msg0 byte1|...|msg1 len|msg1 crc|msg1 seq#|msg1 byte0|msg1 byte1|...]
 	//frame length = data length + seq# + error checking byte
 	//bufferReadIndex points to the first byte of frame, i.e. the length
 	uint8_t frameLen = rcvdBytsBuf[bufferReadIndex];
 	//move buffer pointer one byte further
-	//after this bufferReadIndex points to the first byte of the actual data
 	bufferReadIndex++;
 	//we consider this message processed as of now
 	numMsgsInBuffer--;

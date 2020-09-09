@@ -7,7 +7,7 @@ void setupTransmitter(){
 /**
  * Notes:
  * When the receiver is an Arduino:
- * Using digitalWrite() and delayMicroseconds() we will have frequent 8-12us timing errors errors
+ * Using digitalWrite() and delayMicroseconds() we will have frequent 8-12us timing errors
  * Using native AVR code (PORTx/_delay_us) will decrease the error rate to frequent 4us errors
  * Disabling interrupts during transmission + native AVR reduces errors to occasional 4us errors
  * With our 100+us timings even a 50us error is forgiveable so we'll just stick with digitalWrite()
