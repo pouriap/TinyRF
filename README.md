@@ -21,7 +21,7 @@ An Arduino library for using generic 315MHz / 433MHz RF modules with ATtiny13 as
 Copy the contents of the repository in your Arduino libraries folder in a subfolder called `TinyRF`.
 
 ### Transmitter sketch:
-```
+```C++
 #include "TinyRF_TX.h"
 
 void setup(){
@@ -42,7 +42,7 @@ void loop(){
 ```
 
 ### Receiver sketch:
-```
+```C++
 #include "TinyRF_RX.h"
 
 int rxPin = 2;
@@ -111,8 +111,3 @@ In order to make the library easy to use for Arduino users I have written the li
 
 ## How to change settings:
 Transmitter pin number and other settings are defined in `Settings.h` instead of being set programatically in order to save program space. To find out which settings are available and what they do take a look at `Settings.h`. 
-
-## Why make this library:
-I needed a reliable system to send soil moisture data from different "stations" to a central Arduino receiver. The station needed to be as cheap as possible and use as little power as possible, so ATtiny13 and the generic 315MHz / 433MHz RF modules were my choice. 
-
-The problem was available libraries were either too big to fit in the tiny or were unreliable. So I wrote my own library with build-in error checking and sequence numbering and ability to send relatively long messages. The library can be used with Arduino or any other AVR but it's particularly useful for ATtinye MCUs that have limited resources.
