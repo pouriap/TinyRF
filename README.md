@@ -8,9 +8,8 @@ An Arduino library for using generic 315MHz / 433MHz RF modules with ATtiny13 as
 * Built-in error checking
 * Built-in sequence numbering
 * Data transmission speeds up to 1000bps (2500bps with calibrated clock)
-* Up to 255 byte message length
 * Ability to disable features in order to preserve memory space
-* Relatively small memory footprint (~270bytes FLASH, 5bytes RAM with all features enabled)
+* Small memory usage: 172 Bytes FLASH, 1 Byte RAM with all features enabled. (Using [MicroCore](https://github.com/MCUdude/MicroCore) with LTO enabled)
 
 **Transmitter MCU support:** ATtiny13 or any other AVR microcontroller you can program with Arduino IDE.
 
@@ -98,10 +97,22 @@ void loop(){
 }
 ```
 
+## How to reduce memory usage?
+If you're running out of memory here are a few TinyRF-specific and general hints:
+* Disable sequence numbering: If you don't need the sequence numbering feature you can disable it by uncommenting `#define TRF_SEQ_DISABLED` in `Settings.h`. Note that disabling sequence numbering will also disable TinyRF's ability to detect duplicate messages and the `TRF_ERR_DUPLICATE_MSG` return code.
+* Use checksum for error detection: Checksum detects less errors compared to CRC (the default error checking) but also occupies less memory. To use checksum instead of CRC uncomment `#define TRF_ERROR_CHECKING_CHECKSUM` in `Settings.h` and comment out the CRC define.
+* Disable error checking altogether: If you don't need the error checking you can completely disable it by uncommenting `#define TRF_ERROR_CHECKING_NONE` in `Settings.h`. You should also comment checksum and CRC.
+* Checkout [Efficient C Coding for AVR](https://teslabs.com/openplayer/docs/docs/prognotes/efficient_c_coding_avr.pdf). Specially the section about "Variables and Data
+Types".
+* Use Atmel Studio and write in pure C instead of using Arduino. There is some overhead when using even the `setup()` and `loop()` function so if you need every last byte you should forget Arduino libraries and just use purce C.
+
+## How to use without Arduino?
+In order to make the library easy to use for Arduino users I have written the library with Arduino functions such as `digitalWrite()` and `delayMicroseconds()`. The optimizer automatically takes care of them and they don't add an overhead (tested with ATtiny13 + MicroCore). If you want to use it in a pure C AVR project you'll have to replace the functions yourself.
+
 ## How to change settings:
 Transmitter pin number and other settings are defined in `Settings.h` instead of being set programatically in order to save program space. To find out which settings are available and what they do take a look at `Settings.h`. 
 
 ## Why make this library:
-These generic 315MHz / 433MHz RF modules are cheap. The ATtiny13 is cheap. Why not use them together to make a cheap yet reliable system? 
+I needed a reliable system to send soil moisture data from different "stations" to a central Arduino receiver. The station needed to be as cheap as possible and use as little power as possible, so ATtiny13 and the generic 315MHz / 433MHz RF modules were my choice. 
 
-I needed a reliable system to send soil moisture data from different "stations" to a central Arduino receiver. The station needed to be as cheap as possible and use as little power as possible, so ATtiny13 was the  choice. The problem was available libraries were either too big to fit in the tiny or were unreliable. So I wrote my own library with build-in error checking and sequence numbering and ability to send messages longer than 128bits. It's very useful for microcontrollers that have limited storage.
+The problem was available libraries were either too big to fit in the tiny or were unreliable. So I wrote my own library with build-in error checking and sequence numbering and ability to send relatively long messages. The library can be used with Arduino or any other AVR but it's particularly useful for ATtinye MCUs that have limited resources.
