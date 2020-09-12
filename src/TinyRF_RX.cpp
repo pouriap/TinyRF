@@ -2,8 +2,6 @@
 
 namespace tinyrf{
 
-	//todo: somtimes getReceivedData() returned empty buffer with TRF_ERR_SUCCESS
-
 	volatile bool transmitOngoing = false;
 	//set to true every time interrupt runs, used to determine when data hasn't come in for a long time
 	volatile bool interruptRun = false;
@@ -52,7 +50,7 @@ inline void process_received_byte(){
 			//this is noise = end of transmission
 			transmitOngoing = false;
 
-			//TRF_PRINTLN("");
+			//TRF_PRINTLN(rcvdPulses[i]);
 
 			//the transmission has ended
 			//put the message length at the beggining of the message data in buffer
@@ -112,14 +110,10 @@ void interrupt_routine(){
 		pulsePeriod > (START_PULSE_PERIOD - START_PULSE_TRIGG_ERROR)
 		&& pulsePeriod < (START_PULSE_PERIOD + START_PULSE_MAX_ERROR)
 	){
-		//if we receive a start while we are already processing an ongoing transmission
-		//we add the length of the previous message before starting to process this one
-		//this prevents a curropted buffer where length will be zero because transmission was never finished
-		//todo: or perhaps we should just ignore these messages because they're useless
+		//if we receive a start while we are already processing an ongoing transmission we
+		//consider the previous transmission curropted and move back bufIndex to previous address
 		if(transmitOngoing){
-			rcvdBytsBuf[msgAddrInBuf] = frameLen;
-			numMsgsInBuffer++;
-			bufIndex++;
+			bufIndex = msgAddrInBuf;
 		}
 		transmitOngoing = true;
 		pulse_count = 0;
@@ -153,6 +147,10 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 	//consider the transmission over and add received data to buffer
 #if !defined(TRF_EOT_IN_TX) && !defined(TRF_EOT_NONE)
 
+	//we can't use lastTime which is set in the interrupt because it is a long (non-atomic)
+	//and using it here will wreak havoc, so we calculate another one here
+	//it does not matter that it takes a bit longer because this function is called from loop
+	//not from interrupt
 	static unsigned long lastInterruptRun = 0;
 	unsigned long time = micros();
 	if(interruptRun){
@@ -160,10 +158,15 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 		interruptRun = false;
 	}
 	else if(transmitOngoing){
-		if( (time - lastInterruptRun) > (START_PULSE_PERIOD*2) ){
+		//actually instead of being > START_PULSE_PERIOD, it should be > ONE_PULSE_PERIOD
+		//because after transmission has started we only expect 1 and 0, and if we haven't
+		//received a byte for more than ONE_PULSE_PERIOD it means transmission is over
+		//but for some reason using that value causes lost messages and I cannot for the life of
+		//me find out why
+		if( (time - lastInterruptRun) > (MIN_TX_INTERVAL_REAL) ){
 			//we don't want the interrupt to run while we're modifying these
-			//it's unlikely that this will hurt the interrupt because if it hasn't run for a while it means
-			//transmission has stopped. also this is quite short
+			//it's unlikely that this will hurt the interrupt because if it hasn't run for a while
+			//it means transmission has stopped. also this is quite short
 			detachInterrupt(digitalPinToInterrupt(rxPin));
 			transmitOngoing = false;
 			rcvdBytsBuf[msgAddrInBuf] = frameLen;

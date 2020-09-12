@@ -3,7 +3,6 @@
 
 #include "TinyRF.h"
 
-//todo: add TRF_ to all global variables and defines or add them to namespace
 //Constants
 #define TRF_ERR_SUCCESS 0
 #define TRF_ERR_NO_DATA 1

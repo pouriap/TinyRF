@@ -4,6 +4,7 @@
 #include "Arduino.h"
 #include "Settings.h"
 
+//#define DEBUG
 
 //enable serial output if board is not ATtiny13 (assuming using MicroCore)
 //used for developement debugging
@@ -12,7 +13,7 @@
 #endif
 
 
-#ifdef TRF_SERIAL_ENABLE
+#if defined(TRF_SERIAL_ENABLE) && defined(DEBUG)
 	#define TRF_SERIAL_BEGIN(x) (Serial.begin(x))
 	#define TRF_PRINTLN(x) (Serial.println(x))
 	#define TRF_PRINT(x) (Serial.print(x))
@@ -99,6 +100,10 @@
 const uint16_t ONE_PULSE_TRIGG_ERROR = (TRIGER_ERROR + ONE_PULSE_PERIOD * TRF_CALIB_ERROR / 100);
 const uint16_t ZERO_PULSE_TRIGG_ERROR = (TRIGER_ERROR + ZERO_PULSE_PERIOD * TRF_CALIB_ERROR / 100);
 const uint16_t START_PULSE_TRIGG_ERROR = (TRIGER_ERROR + START_PULSE_PERIOD * TRF_CALIB_ERROR / 100);
+
+const uint16_t MIN_TX_INTERVAL_REAL = START_PULSE_PERIOD + START_PULSE_MAX_ERROR;
+//this is for end-user usage 
+const uint16_t MIN_TX_INTERVAL = (MIN_TX_INTERVAL_REAL * 2)/1000;
 
 
 /**

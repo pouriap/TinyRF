@@ -1,30 +1,14 @@
 #include "TinyRF.h"
 
 //todo: try different CPU speeds
-//todo: receiver is very sensitive to preamble, and in higher data rates we need more preable
-//todo: sometimes getreceivedata() gives blank string, specially when we are sending fast (1ms delay between sends)
-/* whit this code in receiver:
-void loop(){
-  char buf[TRF_MAX_MSG_LEN];
-  for(int i=0; i<TRF_MAX_MSG_LEN; i++){
-	  buf[i] = '\0';
-  }
-  uint8_t err = getReceivedData(buf);
-  if(err == TRF_ERR_SUCCESS){
-	  TRF_PRINTLN(buf);
-  }
-  if(err != TRF_ERR_NO_DATA){
-  	TRF_PRINTLN("---------------------------------");
-  }
-}
-
-*/
 
 /*
 notes:
 - if we had errors when increasing data rates it's because of noise and we should enable MAX values for
 pulse periods to increase accuracy
 - if we had errors when increasing gap between messages it's because of preable 
+- sometimes preamble can act as EOT, this should not be relied on and should be prevented
+- it's possible that START pulse can act as EOT but this should not be used 
 */
 
 

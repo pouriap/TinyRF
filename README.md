@@ -37,7 +37,7 @@ void loop(){
 	//if you have error checking and sequence numbering enabled the getReceivedData() function will return TRF_ERR_DUPLICATE_MSG when receiving a duplicate, making it easy to ignore duplicates
 	//it is socially more responsible to use fewer repetition to minimize your usage of the bandwidth
 	//send((byte*)msg, strlen(msg), 10);
-	delay(1000);	//make sure there's at least a 10ms delay between transmissions
+	delay(MIN_TX_INTERVAL);	//make sure there's at least a MIN_TX_INTERVAL delay between transmissions, otherwise the receiver's behavior will be undefined
 }
 ```
 
