@@ -4,7 +4,7 @@
 #include "Arduino.h"
 #include "Settings.h"
 
-//#define DEBUG
+#define DEBUG
 
 //enable serial output if board is not ATtiny13 (assuming using MicroCore)
 //used for developement debugging
@@ -29,7 +29,7 @@
 #ifdef TRF_TX_UNCALIBRATED
 	#define TRF_CALIB_ERROR 10
 #else
-	#define TRF_CALIB_ERROR 0
+	#define TRF_CALIB_ERROR 3
 #endif
 
 
@@ -60,7 +60,6 @@
 	const uint16_t ZERO_PULSE_PERIOD = 3000;
 	const uint16_t PERIOD_HIGH_DURATION = 2000;
 	const uint16_t TRIGER_ERROR = 50;
-	const uint16_t START_PULSE_MAX_ERROR = 200;
 	const uint16_t NUM_PREAMBLE_BYTES = 3;
 #endif
 
@@ -70,8 +69,7 @@
 	const uint16_t ZERO_PULSE_PERIOD = 1500;
 	const uint16_t PERIOD_HIGH_DURATION = 1000;
 	const uint16_t TRIGER_ERROR = 50;
-	const uint16_t START_PULSE_MAX_ERROR = 200;
-	const uint16_t NUM_PREAMBLE_BYTES = 5;
+	const uint16_t NUM_PREAMBLE_BYTES = 6;
 #endif
 
 #ifdef TRF_BITRATE_1100
@@ -80,7 +78,6 @@
 	const uint16_t ZERO_PULSE_PERIOD = 750;
 	const uint16_t PERIOD_HIGH_DURATION = 500;
 	const uint16_t TRIGER_ERROR = 30;
-	const uint16_t START_PULSE_MAX_ERROR = 100;
 	const uint16_t NUM_PREAMBLE_BYTES = 15;
 #endif
 
@@ -93,13 +90,14 @@
 	const uint16_t ZERO_PULSE_PERIOD = 300;
 	const uint16_t PERIOD_HIGH_DURATION = 200;
 	const uint16_t TRIGER_ERROR = 30;
-	const uint16_t START_PULSE_MAX_ERROR = 100;
 	const uint16_t NUM_PREAMBLE_BYTES = 30;
 #endif
 
 const uint16_t ONE_PULSE_TRIGG_ERROR = (TRIGER_ERROR + ONE_PULSE_PERIOD * TRF_CALIB_ERROR / 100);
 const uint16_t ZERO_PULSE_TRIGG_ERROR = (TRIGER_ERROR + ZERO_PULSE_PERIOD * TRF_CALIB_ERROR / 100);
 const uint16_t START_PULSE_TRIGG_ERROR = (TRIGER_ERROR + START_PULSE_PERIOD * TRF_CALIB_ERROR / 100);
+//for some reason longer delays are more inaccurate, so our start pulse maximum needs more leeway for error
+const uint16_t START_PULSE_MAX_ERROR = 2*START_PULSE_TRIGG_ERROR;
 
 const uint16_t MIN_TX_INTERVAL_REAL = START_PULSE_PERIOD + START_PULSE_MAX_ERROR;
 //this is for end-user usage 

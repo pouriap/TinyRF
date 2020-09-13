@@ -1,5 +1,7 @@
 #include "TinyRF_RX.h"
 
+//todo: test buffer
+
 namespace tinyrf{
 
 	volatile bool transmitOngoing = false;
@@ -28,6 +30,28 @@ void setupReceiver(uint8_t pin){
 	attachInterrupt(digitalPinToInterrupt(rxPin), interrupt_routine, FALLING);
 }
 
+
+/**
+ * This function is called when end of transmission is detected either through interrupt or 
+ * getReceivedData()
+**/
+inline void EOT(){
+	using namespace tinyrf;
+	transmitOngoing = false;
+	//the transmission has ended
+	//put the message length at the beggining of the message data in buffer
+	//increment numMsgsInBuffer
+	//increment bufIndex
+	if(frameLen>0){
+		rcvdBytsBuf[msgAddrInBuf] = frameLen;
+		numMsgsInBuffer++;
+		//if a message's length is 0, then this block will not run and bufIndex will stay
+		//the same and next msg will be written over it
+		bufIndex++;
+	}
+}
+
+
 /**
  * This function is called from the interrupt routine when 8 bits of data has been received
  * It turns the bits into a byte and puts it in the buffer
@@ -48,22 +72,7 @@ inline void process_received_byte(){
 			|| rcvdPulses[i] > (ZERO_PULSE_PERIOD + ZERO_PULSE_TRIGG_ERROR)
 		){
 			//this is noise = end of transmission
-			transmitOngoing = false;
-
-			//TRF_PRINTLN(rcvdPulses[i]);
-
-			//the transmission has ended
-			//put the message length at the beggining of the message data in buffer
-			//increate numMsgsInBuffer
-			//increment bufIndex for holding the next message
-			if(frameLen>0){
-				rcvdBytsBuf[msgAddrInBuf] = frameLen;
-				numMsgsInBuffer++;
-				//if a message's length is 0, then this block will not run and bufIndex will stay
-				//the same and next msg will be written over it
-				bufIndex++;
-			}
-
+			EOT();
 			return;
 		}
 	}
@@ -79,6 +88,7 @@ inline void process_received_byte(){
 	return;
 
 }
+
 
 /**
  * Interrupt routine called on falling edges of pulses
@@ -168,10 +178,7 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 			//it's unlikely that this will hurt the interrupt because if it hasn't run for a while
 			//it means transmission has stopped. also this is quite short
 			detachInterrupt(digitalPinToInterrupt(rxPin));
-			transmitOngoing = false;
-			rcvdBytsBuf[msgAddrInBuf] = frameLen;
-			numMsgsInBuffer++;
-			bufIndex++;
+			EOT();
 			attachInterrupt(digitalPinToInterrupt(rxPin), interrupt_routine, FALLING);
 		}
 	}
@@ -187,12 +194,15 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 
 	/* manage buffer */
 	//this is how our buffer looks like:
-	//[msg0 len|msg0 crc|msg0 seq#|msg0 byte0|msg0 byte1|...|msg1 len|msg1 crc|msg1 seq#|msg1 byte0|msg1 byte1|...]
+	//[frm0 len|frm0 crc|frm0 seq#|frm0 byte0|frm0 byte1|...|frm1 len|frm1 crc|frm1 seq#|frm1 byte0|frm1 byte1|...]
 	//frame length = data length + seq# + error checking byte
 	//bufferReadIndex points to the first byte of frame, i.e. the length
 	uint8_t frameLen = rcvdBytsBuf[bufferReadIndex];
-	//move buffer pointer one byte further
 	bufferReadIndex++;
+	uint8_t frameReadIndex = bufferReadIndex;
+	//move bufferReadIndex 'length' bytes forward to point to the next frame
+	//we need extra calculation to account for resetting of the 8bit buffer index
+	bufferReadIndex += frameLen;
 	//we consider this message processed as of now
 	numMsgsInBuffer--;
 	//if message's length is zero then we don't need to do anything more
@@ -204,14 +214,14 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 
 	#ifndef TRF_ERROR_CHECKING_NONE
 		dataLen--;
-		byte errChckRcvd = rcvdBytsBuf[bufferReadIndex];
-		bufferReadIndex++;
+		byte errChckRcvd = rcvdBytsBuf[frameReadIndex];
+		frameReadIndex++;
 	#endif
 
 	#ifndef TRF_SEQ_DISABLED
 		dataLen--;
-		uint8_t seq = rcvdBytsBuf[bufferReadIndex];
-		bufferReadIndex++;
+		uint8_t seq = rcvdBytsBuf[frameReadIndex];
+		frameReadIndex++;
 	#endif
 
 	numRcvdBytes = dataLen;
@@ -220,7 +230,7 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 		return TRF_ERR_BUFFER_OVERFLOW;
 	}
 
-	// TRF_PRINT(" - read index: ");TRF_PRINT2(bufferReadIndex, DEC);
+	// TRF_PRINT(" - read index: ");TRF_PRINT2(frameReadIndex, DEC);
 	// TRF_PRINT(" - len: ");TRF_PRINT(frameLen);
 	// TRF_PRINTLN("");
 	// for(int i=0; i<256; i++){
@@ -228,9 +238,9 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 	// }
 	// TRF_PRINTLN("");
 
-	//copy the data from 'bufferReadIndex' until bufferReadIndex+dataLen
+	//copy the data from 'frameReadIndex' until frameReadIndex+dataLen
 	for(uint8_t i=0; i<dataLen; i++){
-		buf[i] = rcvdBytsBuf[bufferReadIndex++];
+		buf[i] = rcvdBytsBuf[frameReadIndex++];
 	}
 
 	//error checking
