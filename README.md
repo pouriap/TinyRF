@@ -1,6 +1,8 @@
 # TinyRF
 
-An Arduino library for using generic 315MHz / 433MHz RF modules with ATtiny13 as transmitter.
+An Arduino library for generic 315MHz / 433MHz RF modules.
+
+The transmitter code is small in size making it suitable for microcontrollers with small memories. Namely the ATtiny13, but Arduino and other AVR MCUs are also supported.
 
 ![433MHz / 315MHz cheap ebay RF modules](https://repository-images.githubusercontent.com/293609741/4b910480-f297-11ea-96e6-fd41628b4086)
 

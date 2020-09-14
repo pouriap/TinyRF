@@ -10,7 +10,7 @@ namespace tinyrf{
 	//index of rcvdBytsBuf to put the next byte in
 	volatile uint8_t bufIndex = 0;
 	//buffer for received bytes
-	byte rcvdBytsBuf[TRF_RX_BUFFER_SIZE];
+	volatile byte rcvdBytsBuf[TRF_RX_BUFFER_SIZE];
 	//buffer for received pulses(bits)
 	volatile unsigned long rcvdPulses[8];
 	volatile uint8_t numMsgsInBuffer = 0;
@@ -205,9 +205,13 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 	bufferReadIndex += frameLen;
 	//we consider this message processed as of now
 	numMsgsInBuffer--;
-	//if message's length is zero then we don't need to do anything more
+	//a frame's minimum length is 3 bytes: CRC + SEQ + 1 Byte Data (at least)
 	if(frameLen == 0){
 		return TRF_ERR_NO_DATA;
+	}
+	else if(frameLen < 3){
+		//todo: rename this to corrupted
+		return TRF_ERR_BAD_CRC;
 	}
 
 	uint8_t dataLen = frameLen;
@@ -234,7 +238,7 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 	// TRF_PRINT(" - len: ");TRF_PRINT(frameLen);
 	// TRF_PRINTLN("");
 	// for(int i=0; i<256; i++){
-	// 	TRF_PRINT(rcvdBytsBuf[i]);TRF_PRINT(",");
+	// 	TRF_PRINT(i);TRF_PRINT("[");TRF_PRINT(rcvdBytsBuf[i]);TRF_PRINT("],");
 	// }
 	// TRF_PRINTLN("");
 
@@ -253,6 +257,20 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 		if(errChckRcvd != errChckCalc){
 			return TRF_ERR_BAD_CRC;
 		}
+		//if all data is zeroes CRC will also be zero and CRC check will pass
+		//we can eliminate this by using a non-zero crc init but that would increase crc function 
+		//size, so we do this here in the RX instead
+		else if( (errChckRcvd|errChckCalc) == 0){
+			boolean allZeroes = true;
+			for(uint8_t i=0; i<dataLen; i++){
+				if(buf[i] != 0x00){
+					allZeroes = false;
+				}
+			}
+			if(allZeroes){
+				return TRF_ERR_BAD_CRC;
+			}
+		}
 	#endif
 
 	//sequence number
@@ -263,6 +281,7 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 		//if this is the first seq we receive
 		if(lastSeq == -2){
 			lastSeq = seq;
+			TRF_PRINT(seq);TRF_PRINT(":");
 			return TRF_ERR_SUCCESS;
 		}
 		else if(seq == lastSeq){
