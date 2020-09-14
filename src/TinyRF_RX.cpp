@@ -7,6 +7,8 @@ namespace tinyrf{
 	volatile bool transmitOngoing = false;
 	//set to true every time interrupt runs, used to determine when data hasn't come in for a long time
 	volatile bool interruptRun = false;
+	//efficient alternative to attachInterrupt/detachInterrupt
+	volatile bool interruptDisabled = false;
 	//index of rcvdBytsBuf to put the next byte in
 	volatile uint8_t bufIndex = 0;
 	//buffer for received bytes
@@ -113,6 +115,10 @@ void interrupt_routine(){
 	unsigned long pulsePeriod = time - lastTime;
 	lastTime = time;
 
+	if(interruptDisabled){
+		return;
+	}
+
 	//TRF_PRINTLN(pulsePeriod);
 	
 	//start of transmission
@@ -120,10 +126,10 @@ void interrupt_routine(){
 		pulsePeriod > (START_PULSE_PERIOD - START_PULSE_TRIGG_ERROR)
 		&& pulsePeriod < (START_PULSE_PERIOD + START_PULSE_MAX_ERROR)
 	){
-		//if we receive a start while we are already processing an ongoing transmission we
-		//consider the previous transmission curropted and move back bufIndex to previous address
+		//if we receive a start while we are already processing an ongoing transmission
+		//it means the previous transmission has ended
 		if(transmitOngoing){
-			bufIndex = msgAddrInBuf;
+			EOT();
 		}
 		transmitOngoing = true;
 		pulse_count = 0;
@@ -157,6 +163,8 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 	//consider the transmission over and add received data to buffer
 #if !defined(TRF_EOT_IN_TX) && !defined(TRF_EOT_NONE)
 
+	//todo: there is no guarantee this will be called frequently enough so put it in a timer
+
 	//we can't use lastTime which is set in the interrupt because it is a long (non-atomic)
 	//and using it here will wreak havoc, so we calculate another one here
 	//it does not matter that it takes a bit longer because this function is called from loop
@@ -177,9 +185,9 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 			//we don't want the interrupt to run while we're modifying these
 			//it's unlikely that this will hurt the interrupt because if it hasn't run for a while
 			//it means transmission has stopped. also this is quite short
-			detachInterrupt(digitalPinToInterrupt(rxPin));
+			interruptDisabled = true;
 			EOT();
-			attachInterrupt(digitalPinToInterrupt(rxPin), interrupt_routine, FALLING);
+			interruptDisabled = false;
 		}
 	}
 
