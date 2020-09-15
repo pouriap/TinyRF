@@ -40,6 +40,11 @@ void loop(){
 		return;
 	}
 
+	// if sequence numbering is enabled and you use the sendMulti() function for sending a message
+	// multiple times then getReceivedData() will return TRF_ERR_SUCCESS only once!
+	// this means if you do sendMulti() you dont't have to check for duplicates in your code
+	// you only need to read messages that return TRF_ERR_SUCCESS
+	// these are non-repeated, crc-valid messages
 	if(err == TRF_ERR_SUCCESS){
 		Serial.print("Received: ");
 		for(int i=0; i<numRcvdBytes; i++){

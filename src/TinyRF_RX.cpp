@@ -7,8 +7,8 @@ notes:
 pulse periods to increase accuracy
 - if we had errors when increasing gap between messages it's because of preable 
 - sometimes preamble can act as EOT, this should not be relied on and should be prevented
-- we send zero bytes as preamble so EOT HAS TO be detected before next transmission begins
-other wise these zeroes will be considered part of the previous message
+- we send zero bytes as preamble so EOT "HAS TO" be detected before next transmission begins
+otherwise these zeroes will be considered part of the previous message
 - it's possible that START pulse can act as EOT but this should not be used 
 */
 
@@ -25,13 +25,16 @@ namespace tinyrf{
 	volatile uint8_t bufIndex = 0;
 	//buffer for received bytes
 	volatile byte rcvdBytsBuf[TRF_RX_BUFFER_SIZE];
+	//the frame length as received in the first byte of the message
+	volatile uint8_t rcvdFrameLen = 0;
+	//the frame length as the number of actual bytes received since the transmission has begun
+	volatile uint8_t frameLen = 0;
 	//buffer for received pulses(bits)
 	volatile unsigned long rcvdPulses[8];
+	//number of messages currently in buffer
 	volatile uint8_t numMsgsInBuffer = 0;
 	//beggining of the current message in buffer, the value of this will be the length of the message
 	volatile uint8_t msgAddrInBuf = 0;
-	//length of the current message
-	volatile uint8_t frameLen = 0;
 	//pin used for transmission, should support external interrupts
 	uint8_t rxPin = 2;
 
@@ -58,7 +61,7 @@ inline void EOT(){
 	//increment numMsgsInBuffer
 	//increment bufIndex
 	if(frameLen>0){
-		rcvdBytsBuf[msgAddrInBuf] = frameLen;
+		rcvdBytsBuf[msgAddrInBuf] = frameLen - 1;  //minus the 'len' byte
 		numMsgsInBuffer++;
 		//if a message's length is 0, then this block will not run and bufIndex will stay
 		//the same and next msg will be written over it
@@ -72,35 +75,57 @@ inline void EOT(){
  * It turns the bits into a byte and puts it in the buffer
 **/
 inline void process_received_byte(){
+
 	using namespace tinyrf;
-	byte receivedData = 0x00;
+	byte rcvdByte = 0x00;
+
 	for(uint8_t i=0; i<8; i++){
 		//if pulse is greater than START_PULSE_PERIOD then we will not be here
 		if( 
 			rcvdPulses[i] > (ONE_PULSE_PERIOD - ONE_PULSE_TRIGG_ERROR)
 			&& rcvdPulses[i] < (ONE_PULSE_PERIOD + ONE_PULSE_TRIGG_ERROR)
 		){
-			receivedData |= (1<<i);
+			rcvdByte |= (1<<i);
 		}
 		else if( 
 			rcvdPulses[i] < (ZERO_PULSE_PERIOD - ZERO_PULSE_TRIGG_ERROR)
 			|| rcvdPulses[i] > (ZERO_PULSE_PERIOD + ZERO_PULSE_TRIGG_ERROR)
 		){
-			//this is noise = end of transmission
+			//this is noise => end of transmission
+			//regardless of whether we have received 'rcvdFrameLen' byte of data we EOT here
 			EOT();
 			return;
 		}
 	}
 
-	//TRF_PRINT((char)receivedData);
+	//TRF_PRINT((char)rcvdByte);
 
 	//we have received one bytes of data
+	//if this is the first byte of the frame then it's the message length
+	//this is only for detecting EOT and isn't stored in buffer
+	if(frameLen == 0){
+		#if defined(TRF_ERROR_CHECKING_NONE) && defined(TRF_SEQ_DISABLED)
+			rcvdFrameLen = rcvdByte + 1;
+		#elif defined(TRF_ERROR_CHECKING_NONE) || defined(TRF_SEQ_DISABLED)
+			rcvdFrameLen = rcvdByte + 2;
+		#else
+			rcvdFrameLen = rcvdByte + 3;
+		#endif
+		//TRF_PRINTLN(rcvdFrameLen);
+	}
 	//add it to the buffer
 	//increment bufIndex
 	//increment frameLen
-	rcvdBytsBuf[++bufIndex] = receivedData;
+	else{
+		rcvdBytsBuf[++bufIndex] = rcvdByte;
+	}
+
 	frameLen++;
-	return;
+
+	if(frameLen == rcvdFrameLen){
+		//TRF_PRINT("rcvd ");TRF_PRINT(rcvdFrameLen);TRF_PRINTLN(" bytes");
+		EOT();
+	}
 
 }
 
@@ -254,6 +279,7 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 	numRcvdBytes = dataLen;
 
 	if(dataLen > bufSize){
+		TRF_PRINT("buffer overflow: ");TRF_PRINTLN(dataLen);
 		return TRF_ERR_BUFFER_OVERFLOW;
 	}
 

@@ -58,6 +58,7 @@
  * an Arduino as transmitter comment out this line
 **/
 #define TRF_TX_UNCALIBRATED
+//todo: add calibrated and crystal options
 
 
 /**

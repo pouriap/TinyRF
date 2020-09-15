@@ -45,6 +45,8 @@ void send(byte* data, uint8_t len, boolean incrementSeq){
 	digitalWrite(TRF_TX_PIN, HIGH);
 	delayMicroseconds(PERIOD_HIGH_DURATION - 4);	//-4 because digitalWrite takes ~4us
 
+	transmitByte(len);
+
 	//error checking byte
 	#ifndef TRF_ERROR_CHECKING_NONE
 	transmitByte(errChck);
@@ -64,6 +66,7 @@ void send(byte* data, uint8_t len, boolean incrementSeq){
 	//because receiver uses falling edges to detect pulses
 	digitalWrite(TRF_TX_PIN, LOW);
 
+	//do this after transmission is done so it wouldn't affect the timings
 	#ifndef TRF_SEQ_DISABLED
 	if(incrementSeq){
 		seq++;
@@ -82,6 +85,8 @@ void send(byte* data, uint8_t len, boolean incrementSeq){
 		delayMicroseconds(PERIOD_HIGH_DURATION/2);
 		digitalWrite(TRF_TX_PIN, LOW);
 	}
+#else
+	//delayMicroseconds(MIN_TX_INTERVAL*2);
 #endif
 
 }
