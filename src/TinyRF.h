@@ -4,7 +4,7 @@
 #include "Arduino.h"
 #include "Settings.h"
 
-#define DEBUG
+//#define DEBUG
 
 //enable serial output if board is not ATtiny13 (assuming using MicroCore)
 //used for developement debugging

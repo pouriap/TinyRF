@@ -23,12 +23,13 @@ The transmitter code is small in size making it suitable for microcontrollers wi
 Download the [latest release](https://github.com/pouriap/TinyRF/releases/latest) and copy the contents in your Arduino "libraries" folder.
 
 ## Usage notes:
-* The internal clock(s) of the ATtiny13 can be inaccurate. Specially the 4.8MHz oscillator because by default only the calibration data for the 9.6MHz oscillator are copied. I highly recommend that you [calibrate your chip](https://github.com/MCUdude/MicroCore#internal-oscillator-calibration) to get more accurate timings. The library might not even work depending on how inaccurate your chip is.
-* Make sure you call `getReceivedData()` frequently in your receiver sketch loop. There is a 256 Byte long buffer, depending on how fast you transmit and how long your messages are the buffer may get full. 
-* You can technically send messages as long as 253 Bytes long but that is not recommended. The longer your messages are the more susceptible to noise they become, also the error checking byte will detect less errors the longer your message is.
+* The internal clock(s) of the ATtiny13 can be inaccurate. Specially the 4.8MHz oscillator because by default only the calibration data for the 9.6MHz oscillator is copied. I highly recommend that you [calibrate your chip](https://github.com/MCUdude/MicroCore#internal-oscillator-calibration) to get more accurate timings. The library might not even work depending on how inaccurate your chip is.
+* Make sure you call `getReceivedData()` as frequently as possible in your receiver sketch loop.
+* You can technically send messages as long as 250 Bytes long but that is not recommended. The longer your messages are the more susceptible to noise they become. Also the error checking byte will detect less and less errors the longer your message is.
 * Don't use Arduino IDE's "include library" feature, as it will include unnecessary files. Just include "TinyRF_TX.h" or "TinyRF_RX.h" at the beggining of your sketch.
 * Documentation is provided in form of comments in the example transmitter and receiver sketches.
 * Check out `Settings.h` to find out which settings are available and what they do.
+* Don't forget proper powering! A 0.1uF decoupling cap for the MCU is **mandatory**. I also highly recommend an additional 10/22uF. Also use a nice and stable power source. This will minimize errors and headaches.
 
 ### Transmitter sketch:
 ```C++
@@ -44,20 +45,26 @@ void loop(){
 	const char* msg = "Hello from far away!";
 	send((byte*)msg, strlen(msg));
 
+	//make sure there's at least a MIN_TX_INTERVAL delay between transmissions, otherwise the receiver's behavior will be undefined
+	delay(MIN_TX_INTERVAL);
+
 	// alternatively you can provide a third argument to send a message multiple times
 	// this is for reliability in case some messages get lost in the way
 	// if you have error checking and sequence numbering enabled the getReceivedData() function 
 	// will return TRF_ERR_DUPLICATE_MSG when receiving a duplicate, making it easy to ignore duplicates
 	// it is socially more responsible to use fewer repetition to minimize your usage of the bandwidth
-	// when sending multiple messages make sure you call getReceivedData() frequently in your receiver 
-	// otherwise the buffer gets full
-	// send((byte*)msg, strlen(msg), 10);
+	// when sending multiple messages make sure you call getReceivedData() frequently in the receiver 
+	sendMulti((byte*)msg, strlen(msg), 10);
 
-	//make sure there's at least a MIN_TX_INTERVAL delay between transmissions, otherwise the receiver's behavior will be undefined
-	//delay(MIN_TX_INTERVAL);
+	//note that even tho we are sending the same message with sendMulti, the first time the 
+	//receiver doesn't detect it as a duplicate, because the sequence number is different
+	//but the other 9 messages sent with sendMulti will be detected as duplicate
+
+	delay(MIN_TX_INTERVAL);
+	send((byte*)"-----", 5);
 
 	delay(1000);
-
+	
 }
 ```
 
@@ -140,4 +147,6 @@ Types".
 In order to make the library easy to use for Arduino users I have written the library with Arduino functions such as `digitalWrite()` and `delayMicroseconds()`. The optimizer automatically takes care of them and they don't add an overhead (tested with ATtiny13 + MicroCore). If you want to use it in a pure C AVR project you'll have to replace the functions yourself.
 
 ## How to change settings:
-Transmitter pin number and other settings are defined in `Settings.h` instead of being set programatically in order to save program space. To find out which settings are available and what they do take a look at `Settings.h`. 
+Transmitter pin number and other settings are defined in `Settings.h` instead of being set programatically in order to save program space. To find out which settings are available and what they do take a look at `Settings.h`.
+
+### Feel free to create an issue if you encountered any bugs or problems
