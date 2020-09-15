@@ -26,6 +26,7 @@ Download the [latest release](https://github.com/pouriap/TinyRF/releases/latest)
 * The internal clock(s) of the ATtiny13 can be inaccurate. Specially the 4.8MHz oscillator because by default only the calibration data for the 9.6MHz oscillator are copied. I highly recommend that you [calibrate your chip](https://github.com/MCUdude/MicroCore#internal-oscillator-calibration) to get more accurate timings. The library might not even work depending on how inaccurate your chip is.
 * Make sure you call `getReceivedData()` frequently in your receiver sketch loop. There is a 256 Byte long buffer, depending on how fast you transmit and how long your messages are the buffer may get full. 
 * You can technically send messages as long as 253 Bytes long but that is not recommended. The longer your messages are the more susceptible to noise they become, also the error checking byte will detect less errors the longer your message is.
+* Don't use Arduino IDE's "include library" feature, as it will include unnecessary files. Just include "TinyRF_TX.h" or "TinyRF_RX.h" at the beggining of your sketch.
 * Documentation is provided in form of comments in the example transmitter and receiver sketches.
 * Check out `Settings.h` to find out which settings are available and what they do.
 
@@ -39,8 +40,10 @@ void setup(){
 }
 
 void loop(){
+
 	const char* msg = "Hello from far away!";
 	send((byte*)msg, strlen(msg));
+
 	// alternatively you can provide a third argument to send a message multiple times
 	// this is for reliability in case some messages get lost in the way
 	// if you have error checking and sequence numbering enabled the getReceivedData() function 
@@ -49,7 +52,12 @@ void loop(){
 	// when sending multiple messages make sure you call getReceivedData() frequently in your receiver 
 	// otherwise the buffer gets full
 	// send((byte*)msg, strlen(msg), 10);
-	delay(MIN_TX_INTERVAL);	//make sure there's at least a MIN_TX_INTERVAL delay between transmissions, otherwise the receiver's behavior will be undefined
+
+	//make sure there's at least a MIN_TX_INTERVAL delay between transmissions, otherwise the receiver's behavior will be undefined
+	//delay(MIN_TX_INTERVAL);
+
+	delay(1000);
+
 }
 ```
 
@@ -87,7 +95,7 @@ void loop(){
 	}
 
 	if(err == TRF_ERR_CORRUPTED){
-		Serial.println("Received data corrupted.");
+		Serial.println("Received corrupted data.");
 		return;
 	}
 
@@ -97,15 +105,17 @@ void loop(){
 		return;
 	}
 
-	Serial.print("Received: ");
-	for(int i=0; i<numRcvdBytes; i++){
-		Serial.print((char)buf[i]);
-	}
-	Serial.println("");
+	if(err == TRF_ERR_SUCCESS){
+		Serial.print("Received: ");
+		for(int i=0; i<numRcvdBytes; i++){
+			Serial.print((char)buf[i]);
+		}
+		Serial.println("");
 
-	if(numLostMsgs>0){
-		Serial.print(numLostMsgs);
-		Serial.println(" messages were lost before this message.");
+		if(numLostMsgs>0){
+			Serial.print(numLostMsgs);
+			Serial.println(" messages were lost before this message.");
+		}
 	}
 	
 }

@@ -30,7 +30,7 @@ void loop(){
 	}
 
 	if(err == TRF_ERR_CORRUPTED){
-		Serial.println("Received data corrupted.");
+		Serial.println("Received corrupted data.");
 		return;
 	}
 
@@ -40,15 +40,17 @@ void loop(){
 		return;
 	}
 
-	Serial.print("Received: ");
-	for(int i=0; i<numRcvdBytes; i++){
-		Serial.print((char)buf[i]);
-	}
-	Serial.println("");
+	if(err == TRF_ERR_SUCCESS){
+		Serial.print("Received: ");
+		for(int i=0; i<numRcvdBytes; i++){
+			Serial.print((char)buf[i]);
+		}
+		Serial.println("");
 
-	if(numLostMsgs>0){
-		Serial.print(numLostMsgs);
-		Serial.println(" messages were lost before this message.");
+		if(numLostMsgs>0){
+			Serial.print(numLostMsgs);
+			Serial.println(" messages were lost before this message.");
+		}
 	}
 	
 }

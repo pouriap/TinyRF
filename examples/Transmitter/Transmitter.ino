@@ -6,8 +6,10 @@ void setup(){
 }
 
 void loop(){
+
 	const char* msg = "Hello from far away!";
 	send((byte*)msg, strlen(msg));
+
 	// alternatively you can provide a third argument to send a message multiple times
 	// this is for reliability in case some messages get lost in the way
 	// if you have error checking and sequence numbering enabled the getReceivedData() function 
@@ -16,5 +18,10 @@ void loop(){
 	// when sending multiple messages make sure you call getReceivedData() frequently in your receiver 
 	// otherwise the buffer gets full
 	// send((byte*)msg, strlen(msg), 10);
-	delay(MIN_TX_INTERVAL);	//make sure there's at least a MIN_TX_INTERVAL delay between transmissions, otherwise the receiver's behavior will be undefined
+
+	//make sure there's at least a MIN_TX_INTERVAL delay between transmissions, otherwise the receiver's behavior will be undefined
+	//delay(MIN_TX_INTERVAL);
+
+	delay(1000);
+	
 }

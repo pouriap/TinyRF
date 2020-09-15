@@ -17,6 +17,9 @@
 #ifndef TRF_ERROR_CHECKING_NONE
 #define TRF_ERR_DUPLICATE_MSG 4
 #endif
+//this is only used so that when we get noise in the buffer (all-zeroes or less than 3 byte frames)
+//we won't return TRF_ERR_CORRUPTED, because there's no data to begin with
+#define TRF_ERR_NOISE 10
 
 
 /**

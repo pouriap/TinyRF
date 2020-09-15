@@ -1,8 +1,14 @@
 #include "TinyRF_TX.h"
 
+#ifndef TRF_SEQ_DISABLED
+	uint8_t seq = 0;
+#endif
+
 void setupTransmitter(){
 	pinMode(TRF_TX_PIN, OUTPUT);
 }
+
+//todo: optimize seq and incrementSeq
 
 /**
  * Notes:
@@ -14,11 +20,7 @@ void setupTransmitter(){
  * Regarding FLASH usage, it appears MicroCore's ATtiny13 optimizer already does the convertsion
  * and in my tests there was no difference between using digitalWrite() and native code
 **/
-void send(byte* data, uint8_t len){
-
-	#ifndef TRF_SEQ_DISABLED
-		static uint8_t seq = 0;
-	#endif
+void send(byte* data, uint8_t len, boolean incrementSeq){
 
 	//we calculate the crc here, because if we do it after the transmission has started 
 	//it will create a delay during transmission which causes the receiver to lose accuracy
@@ -50,7 +52,7 @@ void send(byte* data, uint8_t len){
 
 	//sequence number
 	#ifndef TRF_SEQ_DISABLED
-	transmitByte(seq++);
+	transmitByte(seq);
 	#endif
 
 	//data
@@ -61,7 +63,13 @@ void send(byte* data, uint8_t len){
 	//reset the line to LOW so receiver detects last pulse
 	//because receiver uses falling edges to detect pulses
 	digitalWrite(TRF_TX_PIN, LOW);
-	
+
+	#ifndef TRF_SEQ_DISABLED
+	if(incrementSeq){
+		seq++;
+	}
+	#endif
+
 	//receiver relies on noise to detect end of transmission, 
 	//so we send it some artificial noise to "announce" end of transmission
 	//be careful choosing this because when we're here receiver is expecting a byte not a start pulse
@@ -78,11 +86,15 @@ void send(byte* data, uint8_t len){
 
 }
 
-void send(byte data[], uint8_t len, uint8_t times){
+void sendMulti(byte data[], uint8_t len, uint8_t times){
 	for(uint8_t i=0; i<times; i++){
-		send(data, len);
-		delayMicroseconds(START_PULSE_PERIOD * 4);
+		send(data, len, false);
+		//reset seq, because we want to send the same sequence number so that the receiver
+		//will realize we are sending one message multiple times
+		//we do this like this instead of cheking in send() function to keep send() function small
+		delayMicroseconds(MIN_TX_INTERVAL_REAL * 2);
 	}
+	seq++;
 }
 
 //sends one byte

@@ -7,6 +7,8 @@ notes:
 pulse periods to increase accuracy
 - if we had errors when increasing gap between messages it's because of preable 
 - sometimes preamble can act as EOT, this should not be relied on and should be prevented
+- we send zero bytes as preamble so EOT HAS TO be detected before next transmission begins
+other wise these zeroes will be considered part of the previous message
 - it's possible that START pulse can act as EOT but this should not be used 
 */
 
@@ -232,7 +234,7 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 		return TRF_ERR_NO_DATA;
 	}
 	else if(frameLen < 3){
-		return TRF_ERR_CORRUPTED;
+		return TRF_ERR_NOISE;
 	}
 
 	uint8_t dataLen = frameLen;
@@ -289,7 +291,7 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 				}
 			}
 			if(allZeroes){
-				return TRF_ERR_CORRUPTED;
+				return TRF_ERR_NOISE;
 			}
 		}
 	#endif
@@ -302,7 +304,7 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 		//if this is the first seq we receive
 		if(lastSeq == -2){
 			lastSeq = seq;
-			TRF_PRINT(seq);TRF_PRINT(":");
+			//TRF_PRINT(seq);TRF_PRINT(":");
 			return TRF_ERR_SUCCESS;
 		}
 		else if(seq == lastSeq){
@@ -322,7 +324,7 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 			numLostMsgs = 255 - lastSeq + seq;
 		}
 
-		TRF_PRINT(seq);TRF_PRINT(":");
+		//TRF_PRINT(seq);TRF_PRINT(":");
 
 		if(seq == 255){
 			//because next valid seq will be 0 
