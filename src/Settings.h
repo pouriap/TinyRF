@@ -14,7 +14,7 @@
  * CRC detects more errors but uses ~20bytes more program space
  * Checksum detects less errors
  * Alternatively you can use TRF_ERROR_CHECKING_NONE to disable error checking
- * Note that error checking can only detect if a data was curropted during transmission. 
+ * Note that error checking can only detect if a data was corrupted during transmission. 
  * It cannot recover the original data. So you still need to send a message multiple times to 
  * make sure it is received.
 **/

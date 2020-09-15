@@ -1,9 +1,19 @@
 #include "TinyRF_RX.h"
 
-//todo: test buffer
+
+/*
+notes:
+- if we had errors when increasing data rates it's because of noise and we should enable MAX values for
+pulse periods to increase accuracy
+- if we had errors when increasing gap between messages it's because of preable 
+- sometimes preamble can act as EOT, this should not be relied on and should be prevented
+- it's possible that START pulse can act as EOT but this should not be used 
+*/
+
 
 namespace tinyrf{
-
+	
+	//is true when START is received but EOT hasn't happened yet
 	volatile bool transmitOngoing = false;
 	//set to true every time interrupt runs, used to determine when data hasn't come in for a long time
 	volatile bool interruptRun = false;
@@ -16,10 +26,11 @@ namespace tinyrf{
 	//buffer for received pulses(bits)
 	volatile unsigned long rcvdPulses[8];
 	volatile uint8_t numMsgsInBuffer = 0;
+	//beggining of the current message in buffer, the value of this will be the length of the message
 	volatile uint8_t msgAddrInBuf = 0;
+	//length of the current message
 	volatile uint8_t frameLen = 0;
-	//indicates where in the received bytes buffer to read next, used by getReceivedData()
-	uint8_t bufferReadIndex = 0;
+	//pin used for transmission, should support external interrupts
 	uint8_t rxPin = 2;
 
 }
@@ -155,6 +166,9 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 
 	using namespace tinyrf;
 
+	//indicates where in the received bytes buffer to read next, used by getReceivedData()
+	static uint8_t bufferReadIndex = 0;
+
 	numRcvdBytes = 0;
 	numLostMsgs = 0;
 
@@ -218,8 +232,7 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 		return TRF_ERR_NO_DATA;
 	}
 	else if(frameLen < 3){
-		//todo: rename this to corrupted
-		return TRF_ERR_BAD_CRC;
+		return TRF_ERR_CORRUPTED;
 	}
 
 	uint8_t dataLen = frameLen;
@@ -263,7 +276,7 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 			byte errChckCalc = TRF_ERR_CHK_FUNC(buf, dataLen);
 		#endif
 		if(errChckRcvd != errChckCalc){
-			return TRF_ERR_BAD_CRC;
+			return TRF_ERR_CORRUPTED;
 		}
 		//if all data is zeroes CRC will also be zero and CRC check will pass
 		//we can eliminate this by using a non-zero crc init but that would increase crc function 
@@ -276,7 +289,7 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 				}
 			}
 			if(allZeroes){
-				return TRF_ERR_BAD_CRC;
+				return TRF_ERR_CORRUPTED;
 			}
 		}
 	#endif
