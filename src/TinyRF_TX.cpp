@@ -8,8 +8,6 @@ void setupTransmitter(){
 	pinMode(TRF_TX_PIN, OUTPUT);
 }
 
-//todo: optimize seq and incrementSeq
-
 /**
  * Notes:
  * When the receiver is an Arduino:

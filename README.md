@@ -11,7 +11,7 @@ The transmitter code is small in size making it suitable for microcontrollers wi
 * Built-in sequence numbering
 * Data transmission speeds up to 1000bps (2500bps with calibrated clock)
 * Ability to disable features in order to preserve memory space
-* Small memory usage: 172 Bytes FLASH, 1 Byte RAM with all features enabled. (Using [MicroCore](https://github.com/MCUdude/MicroCore) with LTO enabled)
+* Small(ish) memory usage: 192 Bytes FLASH, 1 Byte RAM with all features enabled. (Using [MicroCore](https://github.com/MCUdude/MicroCore) with LTO enabled)
 
 **Transmitter MCU support:** ATtiny13 or any other AVR microcontroller you can program with Arduino IDE.
 

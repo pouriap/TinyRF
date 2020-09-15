@@ -26,10 +26,12 @@
 #endif
 
 
-#ifdef TRF_TX_UNCALIBRATED
+#if defined(TRF_TX_UNCALIBRATED)
 	#define TRF_CALIB_ERROR 10
-#else
-	#define TRF_CALIB_ERROR 3
+#elif defined(TRF_TX_CALIBRATED)
+	#define TRF_CALIB_ERROR 2
+#elif defined(TRF_TX_CRYSTAL)
+	#define TRF_CALIB_ERROR 0
 #endif
 
 
