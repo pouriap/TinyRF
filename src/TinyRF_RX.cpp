@@ -29,6 +29,8 @@ namespace tinyrf{
 	volatile uint8_t bufWriteIndex = 0;
 	//index of rcvdBytesBuf to read the next byte from
 	uint8_t bufReadIndex = 0;
+	//used to detect when bufWriteIndex is about to overwire bufReadIndex
+	volatile uint8_t bufsDiff = 0;
 	//the frame length as received in the first byte of the message
 	volatile uint8_t rcvdFrameLen = 0;
 	//the frame length as the number of actual bytes received since the transmission has begun
@@ -51,6 +53,21 @@ void setupReceiver(uint8_t pin){
 }
 
 
+inline void incBufWriteIndex(){
+	using namespace tinyrf;
+	bufWriteIndex++;
+	bufsDiff++;
+	//if incrementing bufsDiff causes it to reset to zero it means it has reached the bufReadIndex
+	//so we move bufReadIndex one frame forward
+	if(bufsDiff == 0){
+		uint8_t emptiedBytes = rcvdBytesBuf[bufReadIndex] + 1;
+		numMsgsInBuffer--;
+		bufReadIndex += emptiedBytes;
+		bufsDiff -= emptiedBytes;
+	}
+}
+
+
 /**
  * This function is called when end of transmission is detected either through interrupt or 
  * getReceivedData()
@@ -67,7 +84,7 @@ inline void EOT(){
 		numMsgsInBuffer++;
 		//if a message's length is 0, then this block will not run and bufWriteIndex will stay
 		//the same and next msg will be written over it
-		bufWriteIndex++;
+		incBufWriteIndex();
 	}
 }
 
@@ -119,7 +136,8 @@ inline void process_received_byte(){
 	//increment bufWriteIndex
 	//increment frameLen
 	else{
-		rcvdBytesBuf[++bufWriteIndex] = rcvdByte;
+		incBufWriteIndex();
+		rcvdBytesBuf[bufWriteIndex] = rcvdByte;
 	}
 
 	frameLen++;
@@ -251,9 +269,11 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 	//bufReadIndex points to the first byte of frame, i.e. the length
 	uint8_t frameLen = rcvdBytesBuf[bufReadIndex];
 	bufReadIndex++;
+	bufsDiff--;
 	uint8_t frameReadIndex = bufReadIndex;
 	//move bufReadIndex 'length' bytes forward to point to the next frame
 	bufReadIndex += frameLen;
+	bufsDiff -= frameLen;
 	//we consider this message processed as of now
 	numMsgsInBuffer--;
 	//a frame's minimum length is 3 bytes: CRC + SEQ + 1 Byte Data (at least)
