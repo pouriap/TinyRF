@@ -2,7 +2,7 @@
 
 A small Arduino library for generic 315MHz / 433MHz RF modules.
 
-The transmitter code is small in size making it suitable for microcontrollers with small memories. Namely the ATtiny13, but Arduino and other AVR MCUs are also supported.
+The transmitter code is small in size making it suitable for microcontrollers with limited FLASH space. Namely the ATtiny13, but Arduino and other AVR MCUs are also supported.
 
 ![433MHz / 315MHz cheap ebay RF modules](https://repository-images.githubusercontent.com/293609741/4b910480-f297-11ea-96e6-fd41628b4086)
 
@@ -15,7 +15,7 @@ The transmitter code is small in size making it suitable for microcontrollers wi
 
 **Transmitter MCU support:** ATtiny13 or any other AVR microcontroller you can program with Arduino IDE.
 
-**Receiver MCU support:** Currently a more capable board like an Arduino is needed for receiver because the receiver part needs more resources.
+**Receiver MCU support:** Arduino is recommended. But any other AVR microcontroller that runs at 16MHz cpu speed or higher and has at least one external interrupt pin with sufficient FLASH memory (>4KB) should work. 
 
 **Arduino IDE support:** Arduino IDE 1.6.0 and higher.
 
@@ -45,7 +45,8 @@ void loop(){
 	const char* msg = "Hello from far away!";
 	send((byte*)msg, strlen(msg));
 
-	//make sure there's at least a MIN_TX_INTERVAL delay between transmissions, otherwise the receiver's behavior will be undefined
+	//make sure there's at least a MIN_TX_INTERVAL delay between transmissions
+	//otherwise the receiver's behavior will be undefined
 	delay(MIN_TX_INTERVAL);
 
 	// alternatively you can provide a third argument to send a message multiple times

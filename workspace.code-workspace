@@ -2,6 +2,12 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "D:\\Personal Folder\\Pouria\\My Documents\\Arduino\\projects\\TinyRF_RX"
+		},
+		{
+			"path": "D:\\Personal Folder\\Pouria\\My Documents\\Arduino\\projects\\TinyRF_TX"
 		}
 	],
 	"settings": {

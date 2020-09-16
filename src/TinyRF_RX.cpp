@@ -21,16 +21,18 @@ namespace tinyrf{
 	volatile bool interruptRun = false;
 	//efficient alternative to attachInterrupt/detachInterrupt
 	volatile bool interruptDisabled = false;
-	//index of rcvdBytsBuf to put the next byte in
-	volatile uint8_t bufIndex = 0;
+	//buffer for received pulses(bits)
+	volatile unsigned long rcvdPulses[8];
 	//buffer for received bytes
-	volatile byte rcvdBytsBuf[TRF_RX_BUFFER_SIZE];
+	volatile byte rcvdBytesBuf[TRF_RX_BUFFER_SIZE];
+	//index of rcvdBytesBuf to write the next byte in
+	volatile uint8_t bufWriteIndex = 0;
+	//index of rcvdBytesBuf to read the next byte from
+	uint8_t bufReadIndex = 0;
 	//the frame length as received in the first byte of the message
 	volatile uint8_t rcvdFrameLen = 0;
 	//the frame length as the number of actual bytes received since the transmission has begun
 	volatile uint8_t frameLen = 0;
-	//buffer for received pulses(bits)
-	volatile unsigned long rcvdPulses[8];
 	//number of messages currently in buffer
 	volatile uint8_t numMsgsInBuffer = 0;
 	//beggining of the current message in buffer, the value of this will be the length of the message
@@ -59,13 +61,13 @@ inline void EOT(){
 	//the transmission has ended
 	//put the message length at the beggining of the message data in buffer
 	//increment numMsgsInBuffer
-	//increment bufIndex
+	//increment bufWriteIndex
 	if(frameLen>0){
-		rcvdBytsBuf[msgAddrInBuf] = frameLen - 1;  //minus the 'len' byte
+		rcvdBytesBuf[msgAddrInBuf] = frameLen - 1;  //minus the 'len' byte
 		numMsgsInBuffer++;
-		//if a message's length is 0, then this block will not run and bufIndex will stay
+		//if a message's length is 0, then this block will not run and bufWriteIndex will stay
 		//the same and next msg will be written over it
-		bufIndex++;
+		bufWriteIndex++;
 	}
 }
 
@@ -114,10 +116,10 @@ inline void process_received_byte(){
 		//TRF_PRINTLN(rcvdFrameLen);
 	}
 	//add it to the buffer
-	//increment bufIndex
+	//increment bufWriteIndex
 	//increment frameLen
 	else{
-		rcvdBytsBuf[++bufIndex] = rcvdByte;
+		rcvdBytesBuf[++bufWriteIndex] = rcvdByte;
 	}
 
 	frameLen++;
@@ -171,7 +173,7 @@ void interrupt_routine(){
 		}
 		transmitOngoing = true;
 		pulse_count = 0;
-		msgAddrInBuf = bufIndex;
+		msgAddrInBuf = bufWriteIndex;
 		frameLen = 0;
 	}
 	else if(transmitOngoing){
@@ -188,13 +190,12 @@ void interrupt_routine(){
 
 }
 
+//#define showbuffer
+#define showseq
 
 uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint8_t &numLostMsgs){
 
 	using namespace tinyrf;
-
-	//indicates where in the received bytes buffer to read next, used by getReceivedData()
-	static uint8_t bufferReadIndex = 0;
 
 	numRcvdBytes = 0;
 	numLostMsgs = 0;
@@ -238,20 +239,21 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 		return TRF_ERR_NO_DATA;
 	}
 
-	// TRF_PRINT("len addr: ");TRF_PRINT2(bufferReadIndex, DEC);
-	// TRF_PRINT(" - #msgs in buf: ");TRF_PRINT(numMsgsInBuffer);
+	#ifdef showbuffer
+	TRF_PRINT("len addr: ");TRF_PRINT2(bufReadIndex, DEC);
+	TRF_PRINT(" - #msgs in buf: ");TRF_PRINT(numMsgsInBuffer);
+	#endif
 
 	/* manage buffer */
 	//this is how our buffer looks like:
 	//[frm0 len|frm0 crc|frm0 seq#|frm0 byte0|frm0 byte1|...|frm1 len|frm1 crc|frm1 seq#|frm1 byte0|frm1 byte1|...]
 	//frame length = data length + seq# + error checking byte
-	//bufferReadIndex points to the first byte of frame, i.e. the length
-	uint8_t frameLen = rcvdBytsBuf[bufferReadIndex];
-	bufferReadIndex++;
-	uint8_t frameReadIndex = bufferReadIndex;
-	//move bufferReadIndex 'length' bytes forward to point to the next frame
-	//we need extra calculation to account for resetting of the 8bit buffer index
-	bufferReadIndex += frameLen;
+	//bufReadIndex points to the first byte of frame, i.e. the length
+	uint8_t frameLen = rcvdBytesBuf[bufReadIndex];
+	bufReadIndex++;
+	uint8_t frameReadIndex = bufReadIndex;
+	//move bufReadIndex 'length' bytes forward to point to the next frame
+	bufReadIndex += frameLen;
 	//we consider this message processed as of now
 	numMsgsInBuffer--;
 	//a frame's minimum length is 3 bytes: CRC + SEQ + 1 Byte Data (at least)
@@ -266,13 +268,13 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 
 	#ifndef TRF_ERROR_CHECKING_NONE
 		dataLen--;
-		byte errChckRcvd = rcvdBytsBuf[frameReadIndex];
+		byte errChckRcvd = rcvdBytesBuf[frameReadIndex];
 		frameReadIndex++;
 	#endif
 
 	#ifndef TRF_SEQ_DISABLED
 		dataLen--;
-		uint8_t seq = rcvdBytsBuf[frameReadIndex];
+		uint8_t seq = rcvdBytesBuf[frameReadIndex];
 		frameReadIndex++;
 	#endif
 
@@ -283,17 +285,19 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 		return TRF_ERR_BUFFER_OVERFLOW;
 	}
 
-	// TRF_PRINT(" - read index: ");TRF_PRINT2(frameReadIndex, DEC);
-	// TRF_PRINT(" - len: ");TRF_PRINT(frameLen);
-	// TRF_PRINTLN("");
-	// for(int i=0; i<256; i++){
-	// 	TRF_PRINT(i);TRF_PRINT("[");TRF_PRINT(rcvdBytsBuf[i]);TRF_PRINT("],");
-	// }
-	// TRF_PRINTLN("");
+	#ifdef showbuffer
+	TRF_PRINT(" - read index: ");TRF_PRINT2(frameReadIndex, DEC);
+	TRF_PRINT(" - len: ");TRF_PRINT(frameLen);
+	TRF_PRINTLN("");
+	for(int i=0; i<256; i++){
+		TRF_PRINT(i);TRF_PRINT("[");TRF_PRINT(rcvdBytesBuf[i]);TRF_PRINT("],");
+	}
+	TRF_PRINTLN("");
+	#endif
 
 	//copy the data from 'frameReadIndex' until frameReadIndex+dataLen
 	for(uint8_t i=0; i<dataLen; i++){
-		buf[i] = rcvdBytsBuf[frameReadIndex++];
+		buf[i] = rcvdBytesBuf[frameReadIndex++];
 	}
 
 	//error checking
@@ -325,17 +329,25 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 	//sequence number
 	#ifndef TRF_SEQ_DISABLED
 
+		#ifdef showseq
+		static uint8_t dupseq = 0;
+		TRF_PRINT(seq);TRF_PRINT(":");
+		#endif
+
 		static int lastSeq = -2;
 
 		//if this is the first seq we receive
 		if(lastSeq == -2){
 			lastSeq = seq;
-			//TRF_PRINT(seq);TRF_PRINT(":");
 			return TRF_ERR_SUCCESS;
 		}
 		else if(seq == lastSeq){
 			//we can only rely on seq# for detecting duplicates if we have error checking
 			#ifndef TRF_ERROR_CHECKING_NONE
+				#ifdef showseq
+				//just a debug thing
+				TRF_PRINT(dupseq++);TRF_PRINT(":");
+				#endif
 				return TRF_ERR_DUPLICATE_MSG;
 			#else
 				return TRF_ERR_SUCCESS;
@@ -349,8 +361,6 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 			//seq is smaller than lastseq meaning seq was reset during lost messages
 			numLostMsgs = 255 - lastSeq + seq;
 		}
-
-		//TRF_PRINT(seq);TRF_PRINT(":");
 
 		if(seq == 255){
 			//because next valid seq will be 0 
