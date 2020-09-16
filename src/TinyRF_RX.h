@@ -12,14 +12,12 @@
 #define TRF_ERR_NO_DATA 2
 #define TRF_ERR_CORRUPTED 3
 #define TRF_ERR_BUFFER_OVERFLOW 4
-//only define this constant if error checking and seq# are enabledso that user will get an error
-//when they try to use this in their code 
-#if !defined(TRF_ERROR_CHECKING_NONE) && !defined(TRF_SEQ_DISABLED)
-#define TRF_ERR_DUPLICATE_MSG 5
-#endif
+
+//these are internal error codes that the user doesn't need to know about
+#define TRF_ERR_DUPLICATE_MSG 10
 //this is only used so that when we get noise in the buffer (all-zeroes or less than 3 byte frames)
 //we won't return TRF_ERR_CORRUPTED, because there's no data to begin with
-#define TRF_ERR_NOISE 10
+#define TRF_ERR_NOISE 11
 
 
 /**

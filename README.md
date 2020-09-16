@@ -43,28 +43,22 @@ void setup(){
 void loop(){
 
 	const char* msg = "Hello from far away!";
+
+	//send function accepts an array of bytes as first argument
+	//second argument is the length of the array
 	send((byte*)msg, strlen(msg));
 
 	//make sure there's at least a MIN_TX_INTERVAL delay between transmissions
 	//otherwise the receiver's behavior will be undefined
 	delay(MIN_TX_INTERVAL);
 
-	// alternatively you can provide a third argument to send a message multiple times
+	// you can provide a third argument to send a message multiple times
 	// this is for reliability in case some messages get lost in the way
-	// if you have error checking and sequence numbering enabled the getReceivedData() function 
-	// will return TRF_ERR_DUPLICATE_MSG when receiving a duplicate, making it easy to ignore duplicates
-	// it is socially more responsible to use fewer repetition to minimize your usage of the bandwidth
 	// when sending multiple messages make sure you call getReceivedData() frequently in the receiver 
 	// the receiver has a 256 byte FIFO buffer, if you send too many messages and/or if they are
 	// too long previous messages will get overwritten in the buffer
+	// it is socially more responsible to use fewer repetition to minimize your usage of the bandwidth
 	sendMulti((byte*)msg, strlen(msg), 10);
-
-	//note that even tho we are sending the same message with sendMulti, the first time the 
-	//receiver doesn't detect it as a duplicate, because the sequence number is different
-	//but the other 9 messages sent with sendMulti will be detected as duplicate
-
-	delay(MIN_TX_INTERVAL);
-	send((byte*)"-----", 5);
 
 	delay(1000);
 	
@@ -75,12 +69,12 @@ void loop(){
 ```C++
 #include "TinyRF_RX.h"
 
-// you can only use pins that support interrupts
+// you can only use pins that support external interrupts
 // in Arduino Uno this is pins 2 and 3
 int rxPin = 2;
 
 void setup(){
-	Serial.begin(9600);
+	Serial.begin(115200);
 	setupReceiver(rxPin);
 }
 
@@ -90,17 +84,18 @@ void loop(){
 	byte buf[bufSize];
 	uint8_t numLostMsgs = 0;
 	uint8_t numRcvdBytes = 0;
+
 	// number of received bytes will be put in numRcvdBytes
 	// if sequence numbering is enabled the number of lost messages will be put in numLostMsgs
 	// if you have disabled sequence numbering or don't need number of lost messages you can omit this argument
 	uint8_t err = getReceivedData(buf, bufSize, numRcvdBytes, numLostMsgs);
 
 	// the receiver has a 256 byte FIFO buffer
-	// if your loop duration is longer than the interval you send your messages then messages might
-	// get accumulated in the buffer. in order to empty the buffer call getReceivedData() in a loop
-	// this is specially the case when you use sendMulti()
-	// note that DUPLICATE MESSAGES DO NOT GET REMOVED FROM THE BUFFER UNTIL YOU CALL getReceivedData() 
-	// as many times as necessary to read them all 
+	// if getReceivedData() isn't called frequently enough then older messages will get overwritten
+	// so make sure the frequency at which you send messages in your tx code is slower than the frequency
+	// at which you call getReceivedData() in your rx code to prevent that
+	// specially when you are using sendMulti()
+	// duplicate messages that are sent using sendMulti() will stay in the buffer until you read the first one
 
 	if(err == TRF_ERR_NO_DATA){
 		return;
@@ -116,16 +111,10 @@ void loop(){
 		return;
 	}
 
-	// this will only work if error checking and sequence numbering are enabled
-	if(err == TRF_ERR_DUPLICATE_MSG){
-		Serial.println("Duplicate message.");
-		return;
-	}
-
 	// if sequence numbering is enabled and you use the sendMulti() function for sending a message
-	// multiple times then getReceivedData() will return TRF_ERR_SUCCESS only once!
-	// this means if you do sendMulti() you dont't have to check for duplicates in your code
-	// you only need to read messages that return TRF_ERR_SUCCESS
+	// multiple times then getReceivedData() will return TRF_ERR_SUCCESS only once
+	// all the duplicate messages will be automatically ignored
+	// this means all you need to do is check if the return code is TRF_ERR_SUCCESS
 	// these are non-repeated, crc-valid messages
 	if(err == TRF_ERR_SUCCESS){
 		Serial.print("Received: ");
@@ -145,9 +134,9 @@ void loop(){
 
 ## How to reduce memory usage?
 If you're running out of memory here are a few TinyRF-specific and general hints:
-* Disable sequence numbering: If you don't need the sequence numbering feature you can disable it by uncommenting `#define TRF_SEQ_DISABLED` in `Settings.h`. Note that disabling sequence numbering will also disable TinyRF's ability to detect duplicate messages and the `TRF_ERR_DUPLICATE_MSG` return code.
-* Use checksum for error detection: Checksum detects less errors compared to CRC (the default error checking) but also occupies less memory. To use checksum instead of CRC uncomment `#define TRF_ERROR_CHECKING_CHECKSUM` in `Settings.h` and comment out the CRC define.
-* Disable error checking altogether: If you don't need the error checking you can completely disable it by uncommenting `#define TRF_ERROR_CHECKING_NONE` in `Settings.h`. You should also comment checksum and CRC.
+* Use checksum for error detection: Checksum detects less errors compared to CRC (the default error checking) but also occupies less memory. To use checksum instead of CRC uncomment `#define TRF_ERROR_CHECKING_CHECKSUM` in `Settings.h`.
+* Disable sequence numbering: If you don't need the sequence numbering feature you can disable it by uncommenting `#define TRF_SEQ_DISABLED` in `Settings.h`. Note that disabling sequence numbering will also disable TinyRF's ability to detect duplicate messages sent by `sendMulti()`.
+* Disable error checking altogether: If you don't need the error checking you can completely disable it by uncommenting `#define TRF_ERROR_CHECKING_NONE` in `Settings.h`.
 * Use `PROGMEM` for storing strings.
 * Check out [Efficient C Coding for AVR](https://teslabs.com/openplayer/docs/docs/prognotes/efficient_c_coding_avr.pdf). Specially the section about "Variables and Data
 Types".

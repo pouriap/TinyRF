@@ -12,7 +12,6 @@ otherwise these zeroes will be considered part of the previous message
 - it's possible that START pulse can act as EOT but this should not be used 
 */
 
-//todo: instead of returning TRF_ERR_DUPLICATE_MSG just ignore all duplicates until we reach next msg
 
 namespace tinyrf{
 	
@@ -209,8 +208,10 @@ void interrupt_routine(){
 
 }
 
+//degug stuff
 //#define showbuffer
-#define showseq
+//#define showseq
+//#define showduplicates
 
 uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint8_t &numLostMsgs){
 
@@ -321,7 +322,7 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 		buf[i] = rcvdBytesBuf[frameReadIndex++];
 	}
 
-	//error checking
+	/*** error checking ***/
 	#ifndef TRF_ERROR_CHECKING_NONE
 		#ifndef TRF_SEQ_DISABLED
 			byte errChckCalc = TRF_ERR_CHK_FUNC(buf, dataLen, seq);
@@ -347,15 +348,15 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 		}
 	#endif
 
-	//sequence number
+	/*** sequence number ***/
 	#ifndef TRF_SEQ_DISABLED
 
 		#ifdef showseq
-		static uint8_t dupseq = 0;
 		TRF_PRINT(seq);TRF_PRINT(":");
 		#endif
 
 		static int lastSeq = -2;
+		static boolean returnOnDuplicate = false;
 
 		//if this is the first seq we receive
 		if(lastSeq == -2){
@@ -365,12 +366,34 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 		else if(seq == lastSeq){
 			//we can only rely on seq# for detecting duplicates if we have error checking
 			#ifndef TRF_ERROR_CHECKING_NONE
-				#ifdef showseq
-				//just a debug thing
-				TRF_PRINT(dupseq++);TRF_PRINT(":");
+
+				#ifdef showduplicates
+				TRF_PRINTLN("received duplicate message");
 				#endif
-				return TRF_ERR_DUPLICATE_MSG;
-			#else
+
+				if(returnOnDuplicate){
+					return TRF_ERR_DUPLICATE_MSG;
+				}
+
+				//we set this flag to prevent a recursion to occur
+				//recursion would be ok but it uses RAM which an MCU doesn't have so we do this instead
+				returnOnDuplicate = true;
+
+				//read the duplicates until we reach a non-duplicate
+				while(1){
+					uint8_t err = getReceivedData(buf, bufSize, numRcvdBytes, numLostMsgs);
+					if(err == TRF_ERR_DUPLICATE_MSG){
+						continue;
+					}
+					else{
+						//we have reached a non-duplicate message
+						//set returnOnDuplicate to false again and return the return code
+						returnOnDuplicate = false;
+						return err;
+					}
+				}
+
+			#else	//TRF_ERROR_CHECKING_NONE
 				return TRF_ERR_SUCCESS;
 			#endif
 		}
