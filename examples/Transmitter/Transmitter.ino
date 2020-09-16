@@ -19,6 +19,8 @@ void loop(){
 	// will return TRF_ERR_DUPLICATE_MSG when receiving a duplicate, making it easy to ignore duplicates
 	// it is socially more responsible to use fewer repetition to minimize your usage of the bandwidth
 	// when sending multiple messages make sure you call getReceivedData() frequently in the receiver 
+	// the receiver has a 256 byte FIFO buffer, if you send too many messages and/or if they are
+	// too long previous messages will get overwritten in the buffer
 	sendMulti((byte*)msg, strlen(msg), 10);
 
 	//note that even tho we are sending the same message with sendMulti, the first time the 

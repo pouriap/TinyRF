@@ -12,6 +12,7 @@ otherwise these zeroes will be considered part of the previous message
 - it's possible that START pulse can act as EOT but this should not be used 
 */
 
+//todo: instead of returning TRF_ERR_DUPLICATE_MSG just ignore all duplicates until we reach next msg
 
 namespace tinyrf{
 	

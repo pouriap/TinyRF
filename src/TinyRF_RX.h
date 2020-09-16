@@ -8,14 +8,14 @@
  * Error codes returned by getReceivedData()
 **/
 
-#define TRF_ERR_SUCCESS 0
-#define TRF_ERR_NO_DATA 1
-#define TRF_ERR_CORRUPTED 2
-#define TRF_ERR_BUFFER_OVERFLOW 3
-//only define this constant if TRF_ERROR_CHECKING_NONE is not defined so that user will get an error
-//when they try to use this in their code with error checking disabled
-#ifndef TRF_ERROR_CHECKING_NONE
-#define TRF_ERR_DUPLICATE_MSG 4
+#define TRF_ERR_SUCCESS 1
+#define TRF_ERR_NO_DATA 2
+#define TRF_ERR_CORRUPTED 3
+#define TRF_ERR_BUFFER_OVERFLOW 4
+//only define this constant if error checking and seq# are enabledso that user will get an error
+//when they try to use this in their code 
+#if !defined(TRF_ERROR_CHECKING_NONE) && !defined(TRF_SEQ_DISABLED)
+#define TRF_ERR_DUPLICATE_MSG 5
 #endif
 //this is only used so that when we get noise in the buffer (all-zeroes or less than 3 byte frames)
 //we won't return TRF_ERR_CORRUPTED, because there's no data to begin with

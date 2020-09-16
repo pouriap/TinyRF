@@ -20,6 +20,19 @@ void loop(){
 	// if you have disabled sequence numbering or don't need number of lost messages you can omit this argument
 	uint8_t err = getReceivedData(buf, bufSize, numRcvdBytes, numLostMsgs);
 
+	// the receiver has a 256 byte FIFO buffer
+	// if your loop duration is longer than the interval you send your messages then messages might
+	// get accumulated in the buffer. in order to empty the buffer call getReceivedData() in a loop
+	// this is specially the case when you use sendMulti()
+	// note that DUPLICATE MESSAGES DO NOT GET REMOVED FROM THE BUFFER UNTIL YOU CALL getReceivedData() 
+	// as many times as necessary to read them all 
+	// for example
+	// uint8_t err = getReceivedData(buf, bufSize, numRcvdBytes, numLostMsgs);
+	// while(err == TRF_ERR_DUPLICATE_MSG){
+	//  //read until duplicate messages are removed
+	// 	err = getReceivedData(buf, bufSize, numRcvdBytes, numLostMsgs);
+	// }
+
 	if(err == TRF_ERR_NO_DATA){
 		return;
 	}

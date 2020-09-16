@@ -55,6 +55,8 @@ void loop(){
 	// will return TRF_ERR_DUPLICATE_MSG when receiving a duplicate, making it easy to ignore duplicates
 	// it is socially more responsible to use fewer repetition to minimize your usage of the bandwidth
 	// when sending multiple messages make sure you call getReceivedData() frequently in the receiver 
+	// the receiver has a 256 byte FIFO buffer, if you send too many messages and/or if they are
+	// too long previous messages will get overwritten in the buffer
 	sendMulti((byte*)msg, strlen(msg), 10);
 
 	//note that even tho we are sending the same message with sendMulti, the first time the 
@@ -92,6 +94,13 @@ void loop(){
 	// if sequence numbering is enabled the number of lost messages will be put in numLostMsgs
 	// if you have disabled sequence numbering or don't need number of lost messages you can omit this argument
 	uint8_t err = getReceivedData(buf, bufSize, numRcvdBytes, numLostMsgs);
+
+	// the receiver has a 256 byte FIFO buffer
+	// if your loop duration is longer than the interval you send your messages then messages might
+	// get accumulated in the buffer. in order to empty the buffer call getReceivedData() in a loop
+	// this is specially the case when you use sendMulti()
+	// note that DUPLICATE MESSAGES DO NOT GET REMOVED FROM THE BUFFER UNTIL YOU CALL getReceivedData() 
+	// as many times as necessary to read them all 
 
 	if(err == TRF_ERR_NO_DATA){
 		return;
