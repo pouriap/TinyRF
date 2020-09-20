@@ -46,6 +46,50 @@ namespace tinyrf{
 
 }
 
+void lim_inc(volatile uint8_t &num){
+  //reset if it has reached max value
+  if(num == TRF_RX_BUFFER_SIZE - 1){
+    num = 0;
+  }
+  else{
+    num++;
+  }
+}
+
+void lim_sum(volatile uint8_t &num, uint16_t c){
+  c = c % TRF_RX_BUFFER_SIZE;
+  //reset if it has reached max value
+  int sum = num + c;
+  if( sum >= TRF_RX_BUFFER_SIZE ){
+    num = sum - TRF_RX_BUFFER_SIZE;
+  }
+  else{
+    num += c;
+  }
+}
+
+void lim_dec(volatile uint8_t &num){
+  //reset if it has reached min value
+  if(num == 0){
+    num = TRF_RX_BUFFER_SIZE - 1;
+  }
+  else{
+    num--;
+  }
+}
+
+void lim_sub(volatile uint8_t &num, uint16_t c){
+  c = c % TRF_RX_BUFFER_SIZE;
+  int sub = num - c;
+  //reset if it has reached min value
+  if( sub < 0 ){
+    num = TRF_RX_BUFFER_SIZE - c + num;
+  }
+  else{
+    num -= c;
+  }
+}
+
 
 void setupReceiver(uint8_t pin){
 	using namespace tinyrf;
@@ -57,16 +101,16 @@ void setupReceiver(uint8_t pin){
 
 inline void incBufWriteIndex(){
 	using namespace tinyrf;
-	bufWriteIndex++;
-	bufsDiff++;
+	lim_inc(bufWriteIndex);
+	lim_inc(bufsDiff);
 	//if incrementing bufsDiff causes it to reset to zero it means it has reached the bufReadIndex
 	//so we move bufReadIndex one frame forward
 	if(bufsDiff == 0){
 		bufOverwriteOngoing = true;
 		uint8_t emptiedBytes = rcvdBytesBuf[bufReadIndex] + 1;
 		numMsgsInBuffer--;
-		bufReadIndex += emptiedBytes;
-		bufsDiff -= emptiedBytes;
+		lim_sum(bufReadIndex, emptiedBytes);
+		lim_sub(bufsDiff, emptiedBytes);
 		bufOverwriteOngoing = false;
 	}
 }
@@ -281,13 +325,13 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 
 	//bufReadIndex points to the first byte of frame, i.e. the length
 	uint8_t frameLen = rcvdBytesBuf[bufReadIndex];
-	bufReadIndex++;
-	bufsDiff--;
+	lim_inc(bufReadIndex);
+	lim_dec(bufsDiff);
 
 	uint8_t frameReadIndex = bufReadIndex;
 	//move bufReadIndex 'length' bytes forward to point to the next frame
-	bufReadIndex += frameLen;
-	bufsDiff -= frameLen;
+	lim_sum(bufReadIndex, frameLen);
+	lim_sub(bufsDiff, frameLen);
 
 	//we consider this message processed as of now
 	numMsgsInBuffer--;
@@ -310,13 +354,13 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 	#ifndef TRF_ERROR_CHECKING_NONE
 		dataLen--;
 		byte errChckRcvd = rcvdBytesBuf[frameReadIndex];
-		frameReadIndex++;
+		lim_inc(frameReadIndex);
 	#endif
 
 	#ifndef TRF_SEQ_DISABLED
 		dataLen--;
 		uint8_t seq = rcvdBytesBuf[frameReadIndex];
-		frameReadIndex++;
+		lim_inc(frameReadIndex);
 	#endif
 
 	numRcvdBytes = dataLen;
@@ -338,7 +382,8 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 
 	//copy the data from 'frameReadIndex' until frameReadIndex+dataLen
 	for(uint8_t i=0; i<dataLen; i++){
-		buf[i] = rcvdBytesBuf[frameReadIndex++];
+		buf[i] = rcvdBytesBuf[frameReadIndex];
+		lim_inc(frameReadIndex);
 	}
 
 	/*** error checking ***/
@@ -416,7 +461,7 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 				return TRF_ERR_SUCCESS;
 			#endif
 		}
-		else if(seq > (uint8_t)(lastSeq+1)){
+		else if( seq > (uint8_t)(lastSeq + 1) ){
 			numLostMsgs = seq - lastSeq - 1;
 		}
 		else if(seq < lastSeq){

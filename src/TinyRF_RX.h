@@ -48,5 +48,11 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 // Returns one of the errors codes defined in TinyRF_RX.h
 uint8_t getReceivedData(byte buf[],  uint8_t bufSize, uint8_t &numRcvdBytes);
 
+// Functions for buffer addition/substraction
+// They ensure a number doesn't surpass a certain value when added/substracted
+void lim_inc(volatile uint8_t &num);
+void lim_sum(volatile uint8_t &num, uint16_t c);
+void lim_dec(volatile uint8_t &num);
+void lim_sub(volatile uint8_t &num, uint16_t c);
 
 #endif	/* TRF_RX_H */
