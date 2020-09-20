@@ -2,7 +2,7 @@
 
 A small Arduino library for generic 315MHz / 433MHz RF modules.
 
-The transmitter code is small in size making it suitable for microcontrollers with limited FLASH space. Namely the ATtiny13, but Arduino and other AVR MCUs are also supported.
+The transmitter code is small in size making it suitable for microcontrollers with limited memory. Namely the ATtiny13, or other ATtiny chips. But Arduino and other AVR MCUs are also supported.
 
 ![433MHz / 315MHz cheap ebay RF modules](https://repository-images.githubusercontent.com/293609741/4b910480-f297-11ea-96e6-fd41628b4086)
 
@@ -11,16 +11,16 @@ The transmitter code is small in size making it suitable for microcontrollers wi
 * Built-in sequence numbering
 * Data transmission speeds up to 1000bps (2500bps with calibrated clock)
 * Ability to disable features in order to preserve memory space
-* Small(ish) memory usage: 192 Bytes FLASH, 1 Byte RAM with all features enabled. (Using [MicroCore](https://github.com/MCUdude/MicroCore) with LTO enabled)
+* Small memory footprint: 178 Bytes Flash, 1 Byte RAM with all features enabled. (Using [MicroCore](https://github.com/MCUdude/MicroCore) with LTO enabled)
 
 **Transmitter MCU support:** ATtiny13 or any other AVR microcontroller you can program with Arduino IDE.
 
-**Receiver MCU support:** Arduino is recommended. But any other AVR microcontroller that runs at 16MHz cpu speed or higher and has at least one external interrupt pin with sufficient FLASH memory (>4KB) should work. 
+**Receiver MCU support:** Arduino is recommended. But any other AVR microcontroller that runs at 16MHz cpu speed or higher and has at least one external interrupt pin with sufficient Flash memory (>4KB) should work. 
 
 **Arduino IDE support:** Arduino IDE 1.6.0 and higher.
 
 ## How to install the library
-Download the [latest release](https://github.com/pouriap/TinyRF/releases/latest) and copy the contents in your Arduino "libraries" folder.
+Download the [latest release](https://github.com/pouriap/TinyRF/releases/latest) and copy the contents in your Arduino "libraries" folder. Restart Arduino IDE.
 
 ## Usage notes:
 * The internal clock(s) of the ATtiny13 can be inaccurate. Specially the 4.8MHz oscillator because by default only the calibration data for the 9.6MHz oscillator is copied. I highly recommend that you [calibrate your chip](https://github.com/MCUdude/MicroCore#internal-oscillator-calibration) to get more accurate timings. The library might not even work depending on how inaccurate your chip is.
@@ -29,7 +29,7 @@ Download the [latest release](https://github.com/pouriap/TinyRF/releases/latest)
 * Don't use Arduino IDE's "include library" feature, as it will include unnecessary files. Just include "TinyRF_TX.h" or "TinyRF_RX.h" at the beggining of your sketch.
 * Documentation is provided in form of comments in the example transmitter and receiver sketches.
 * Check out `Settings.h` to find out which settings are available and what they do.
-* Don't forget proper powering! A 0.1uF decoupling cap for the MCU is **mandatory**. I also highly recommend an additional 10/22uF. Also use a nice and stable power source. This will minimize errors and headaches.
+* Don't forget proper powering! A 0.1uF decoupling cap for the MCU is **mandatory**. I personally recommend an additional 22uF across the MCU and at least 100uF across the transmitter module. Also use a nice and stable power source. This will minimize errors and headaches.
 
 ### Transmitter sketch:
 ```C++

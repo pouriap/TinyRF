@@ -15,7 +15,7 @@ void setupTransmitter(){
  * Using native AVR code (PORTx/_delay_us) will decrease the error rate to frequent 4us errors
  * Disabling interrupts during transmission + native AVR reduces errors to occasional 4us errors
  * With our 100+us timings even a 50us error is forgiveable so we'll just stick with digitalWrite()
- * Regarding FLASH usage, it appears MicroCore's ATtiny13 optimizer already does the convertsion
+ * Regarding Flash usage, it appears MicroCore's ATtiny13 optimizer already does the convertsion
  * and in my tests there was no difference between using digitalWrite() and native code
 **/
 void send(byte* data, uint8_t len, boolean incrementSeq){
@@ -41,7 +41,7 @@ void send(byte* data, uint8_t len, boolean incrementSeq){
 	digitalWrite(TRF_TX_PIN, LOW);
 	delayMicroseconds(START_PULSE_PERIOD - PERIOD_HIGH_DURATION);
 	digitalWrite(TRF_TX_PIN, HIGH);
-	delayMicroseconds(PERIOD_HIGH_DURATION - 4);	//-4 because digitalWrite takes ~4us
+	delayMicroseconds(PERIOD_HIGH_DURATION);
 
 	transmitByte(len);
 
@@ -56,8 +56,9 @@ void send(byte* data, uint8_t len, boolean incrementSeq){
 	#endif
 
 	//data
-	for(uint8_t i=0; i<len; i++){
-		transmitByte(data[i]);
+	//we send it like this because it uses less memory
+	while(len--){
+		transmitByte(data[len]);
 	}
 
 	//reset the line to LOW so receiver detects last pulse
@@ -104,7 +105,9 @@ void sendMulti(byte data[], uint8_t len, uint8_t times){
 
 //sends one byte
 void transmitByte(byte _byte){
-	for(uint8_t i=0; i<8; i++){
+	//we do our loop like this because it uses less memory
+	uint8_t i=7;
+	do{
 		//send the LOW part of the pulse
 		//the LOW duration determines wether a pulse is a 1 or a 0
 		digitalWrite(TRF_TX_PIN, LOW);
@@ -118,6 +121,6 @@ void transmitByte(byte _byte){
 		//send the HIGH part of the pulse
 		//all pulses have the same HIGH duration
 		digitalWrite(TRF_TX_PIN, HIGH);
-		delayMicroseconds(PERIOD_HIGH_DURATION - 4);
-	}
+		delayMicroseconds(PERIOD_HIGH_DURATION);
+	}while(i--);
 }

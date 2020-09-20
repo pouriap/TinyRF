@@ -152,7 +152,7 @@ inline void process_received_byte(){
 			rcvdPulses[i] > (ONE_PULSE_PERIOD - ONE_PULSE_TRIGG_ERROR)
 			&& rcvdPulses[i] < (ONE_PULSE_PERIOD + ONE_PULSE_TRIGG_ERROR)
 		){
-			rcvdByte |= (1<<i);
+			rcvdByte |= ( 1<<(7-i) );	//tx sends bytes in reverse
 		}
 		else if( 
 			rcvdPulses[i] < (ZERO_PULSE_PERIOD - ZERO_PULSE_TRIGG_ERROR)
@@ -382,7 +382,7 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 
 	//copy the data from 'frameReadIndex' until frameReadIndex+dataLen
 	for(uint8_t i=0; i<dataLen; i++){
-		buf[i] = rcvdBytesBuf[frameReadIndex];
+		buf[dataLen-1-i] = rcvdBytesBuf[frameReadIndex];	//tx sends data in reverse
 		lim_inc(frameReadIndex);
 	}
 

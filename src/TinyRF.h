@@ -45,14 +45,13 @@
 /**
  * This isn't used anywhere in the library. It is defined here for reference and for being used
  * as buffer size in programs that use this library.
- * Do not increase this value!
  * Even tho sending messages of this length is theoretically possible, it is not recommended to 
  * send anything larger than 32 bytes. The longer a message is the more susceptible to noise it become
  * On top of that, the CRC function will become weaker and weaker as the message length increases
  * Also it will take more time to calculate the CRC, increasing transmission time and bugging down
  * the receiver CPU
 **/
-#define TRF_MAX_MSG_LEN 250	//250 to account for CRC, seq# and any other trailer we might add later
+#define TRF_MAX_MSG_LEN TRF_RX_BUFFER_SIZE-5	//-5 to account for len, CRC, seq# and just to be safe
 
 
 //data rate presets
@@ -75,10 +74,10 @@
 #endif
 
 #ifdef TRF_BITRATE_1100
-	const uint16_t START_PULSE_PERIOD = 2000;
-	const uint16_t ONE_PULSE_PERIOD = 1000;
-	const uint16_t ZERO_PULSE_PERIOD = 750;
-	const uint16_t PERIOD_HIGH_DURATION = 500;
+	const uint16_t START_PULSE_PERIOD = 1998;	//for some reason these weird values save 4 bytes
+	const uint16_t ONE_PULSE_PERIOD = 1002;
+	const uint16_t ZERO_PULSE_PERIOD = 752;
+	const uint16_t PERIOD_HIGH_DURATION = 498;
 	const uint16_t TRIGER_ERROR = 30;
 	const uint16_t NUM_PREAMBLE_BYTES = 15;
 #endif
