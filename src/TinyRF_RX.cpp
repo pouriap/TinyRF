@@ -31,6 +31,8 @@ namespace tinyrf{
 	uint8_t bufReadIndex = 0;
 	//used to detect when bufWriteIndex is about to overwire bufReadIndex
 	volatile uint8_t bufsDiff = 0;
+	//whether buffer is being overwritten from the end, used when reading buffer
+	volatile boolean bufOverwriteOngoing = false;
 	//the frame length as received in the first byte of the message
 	volatile uint8_t rcvdFrameLen = 0;
 	//the frame length as the number of actual bytes received since the transmission has begun
@@ -60,10 +62,12 @@ inline void incBufWriteIndex(){
 	//if incrementing bufsDiff causes it to reset to zero it means it has reached the bufReadIndex
 	//so we move bufReadIndex one frame forward
 	if(bufsDiff == 0){
+		bufOverwriteOngoing = true;
 		uint8_t emptiedBytes = rcvdBytesBuf[bufReadIndex] + 1;
 		numMsgsInBuffer--;
 		bufReadIndex += emptiedBytes;
 		bufsDiff -= emptiedBytes;
+		bufOverwriteOngoing = false;
 	}
 }
 
@@ -197,11 +201,10 @@ void interrupt_routine(){
 	else if(transmitOngoing){
 		rcvdPulses[pulse_count] = pulsePeriod;
 		pulse_count++;
-	}
-
-	if(pulse_count == 8){
-		process_received_byte();
-		pulse_count = 0;
+		if(pulse_count == 8){
+			process_received_byte();
+			pulse_count = 0;
+		}
 	}
 
 	//TRF_PRINTLN(micros() - time);
@@ -233,6 +236,7 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 	//not from interrupt
 	static unsigned long lastInterruptRun = 0;
 	unsigned long time = micros();
+
 	if(interruptRun){
 		lastInterruptRun = time;
 		interruptRun = false;
@@ -262,22 +266,37 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 	#ifdef showbuffer
 	TRF_PRINT("len addr: ");TRF_PRINT2(bufReadIndex, DEC);
 	TRF_PRINT(" - #msgs in buf: ");TRF_PRINT(numMsgsInBuffer);
+	TRF_PRINTLN("");
 	#endif
 
 	/* manage buffer */
+	//if buffer is being overwritten wait until it's done so we get the currect bufReadIndex
+	//the time it takes the next few instructions to run is way less than the time it takes for a byte
+	//to arrive, so we're pretty sure buffer overwrite will not happen during the next few instructions
+	while(bufOverwriteOngoing){};
+
 	//this is how our buffer looks like:
 	//[frm0 len|frm0 crc|frm0 seq#|frm0 byte0|frm0 byte1|...|frm1 len|frm1 crc|frm1 seq#|frm1 byte0|frm1 byte1|...]
 	//frame length = data length + seq# + error checking byte
+
 	//bufReadIndex points to the first byte of frame, i.e. the length
 	uint8_t frameLen = rcvdBytesBuf[bufReadIndex];
 	bufReadIndex++;
 	bufsDiff--;
+
 	uint8_t frameReadIndex = bufReadIndex;
 	//move bufReadIndex 'length' bytes forward to point to the next frame
 	bufReadIndex += frameLen;
 	bufsDiff -= frameLen;
+
 	//we consider this message processed as of now
 	numMsgsInBuffer--;
+
+	//a buffer overwrite could happen from this point forward, writing to the buffer as we are 
+	//reading it. but it will only corrupt this one frame, unless we are sending very fast and
+	//reading very slowly, in which case the buffer keeps being overwritten without us being able
+	//to catch up with it
+
 	//a frame's minimum length is 3 bytes: CRC + SEQ + 1 Byte Data (at least)
 	if(frameLen == 0){
 		return TRF_ERR_NO_DATA;
@@ -355,11 +374,11 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 		TRF_PRINT(seq);TRF_PRINT(":");
 		#endif
 
-		static int lastSeq = -2;
+		static int lastSeq = -1;
 		static boolean returnOnDuplicate = false;
 
 		//if this is the first seq we receive
-		if(lastSeq == -2){
+		if(lastSeq == -1){
 			lastSeq = seq;
 			return TRF_ERR_SUCCESS;
 		}
@@ -397,22 +416,15 @@ uint8_t getReceivedData(byte buf[], uint8_t bufSize, uint8_t &numRcvdBytes, uint
 				return TRF_ERR_SUCCESS;
 			#endif
 		}
-
-		if(seq > lastSeq+1){
+		else if(seq > (uint8_t)(lastSeq+1)){
 			numLostMsgs = seq - lastSeq - 1;
 		}
-		else{
+		else if(seq < lastSeq){
 			//seq is smaller than lastseq meaning seq was reset during lost messages
 			numLostMsgs = 255 - lastSeq + seq;
 		}
 
-		if(seq == 255){
-			//because next valid seq will be 0 
-			lastSeq = -1;
-		}
-		else{
-			lastSeq = seq;
-		}
+		lastSeq = seq;
 
 	#endif
 
