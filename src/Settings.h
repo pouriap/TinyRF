@@ -71,6 +71,17 @@
 
 
 /**
+ * Receiver buffer size
+ * It's a circular FIFO buffer
+ * When buffer is full it will start from the beggining, rewriting data regardless of it being read or not
+ * The size of the buffer depends on how much RAM you have available, how big your messages are,
+ * how frequently you send them and how frequently you call getReceivedData() in your receiver code
+ * Note that when you use sendMulti() all of the messages will be stored in buffer until read with getReceivedData()
+**/
+#define TRF_RX_BUFFER_SIZE 128
+
+
+/**
  * [ You probably don't want to change this ]
  * We don't have a specific pulse that signals the end of a transmission. 
  * We rely on 1- noise and 2- message length for that.

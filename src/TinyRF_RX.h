@@ -21,14 +21,6 @@
 
 
 /**
- * Buffer size, i.e. number of bytes received that will be buffered.
- * When buffer is full it will start rewriting from the beggining
- * Do not change
-**/
-#define TRF_RX_BUFFER_SIZE 256
-
-
-/**
  * Function definitions
 **/
 

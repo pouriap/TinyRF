@@ -92,13 +92,10 @@ void send(byte* data, uint8_t len, boolean incrementSeq){
 void sendMulti(byte data[], uint8_t len, uint8_t times){
 	for(uint8_t i=0; i<times; i++){
 		send(data, len, false);
-		//reset seq, because we want to send the same sequence number so that the receiver
-		//will realize we are sending one message multiple times
-		//we do this like this instead of cheking in send() function to keep send() function small
 		//we wait more than we should because: 
 		//1- if there is noise we want it to go away
-		//2- we don't know how often the receiver is calling getReceivedData()
-		delayMicroseconds(MIN_TX_INTERVAL_REAL * 5);
+		//2- prevent receiver buffer from getting full due to very fast transmissions
+		delayMicroseconds(MIN_TX_INTERVAL_REAL + 10000);
 	}
 	#ifndef TRF_SEQ_DISABLED
 	seq++;
