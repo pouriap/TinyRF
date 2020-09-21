@@ -13,9 +13,9 @@ void loop(){
   //second argument is the length of the array
   send((byte*)msg, strlen(msg));
 
-  //make sure there's at least a MIN_TX_INTERVAL delay between transmissions
+  //make sure there's at least a TX_DELAY_MICROS delay between transmissions
   //otherwise the receiver's behavior will be undefined
-  delay(MIN_TX_INTERVAL);
+  delayMicroseconds(TX_DELAY_MICROS);
 
   // you can provide a third argument to send a message multiple times
   // this is for reliability in case some messages get lost in the way

@@ -11,7 +11,7 @@ The transmitter code is small in size making it suitable for microcontrollers wi
 * Built-in sequence numbering
 * Data transmission speeds up to 1000bps (2500bps with calibrated clock)
 * Ability to disable features in order to preserve memory space
-* Small memory footprint: 178 Bytes Flash, 1 Byte RAM with all features enabled. (Using [MicroCore](https://github.com/MCUdude/MicroCore) with LTO enabled)
+* Small memory footprint: 176 bytes Flash, 1 byte RAM with all features enabled. (Using [MicroCore](https://github.com/MCUdude/MicroCore) with LTO enabled)
 
 **Transmitter MCU support:** ATtiny13 or any other AVR microcontroller you can program with Arduino IDE.
 
@@ -48,9 +48,9 @@ void loop(){
   //second argument is the length of the array
   send((byte*)msg, strlen(msg));
 
-  //make sure there's at least a MIN_TX_INTERVAL delay between transmissions
+  //make sure there's at least a TX_DELAY_MICROS delay between transmissions
   //otherwise the receiver's behavior will be undefined
-  delay(MIN_TX_INTERVAL);
+  delayMicroseconds(TX_DELAY_MICROS);
 
   // you can provide a third argument to send a message multiple times
   // this is for reliability in case some messages get lost in the way

@@ -54,31 +54,38 @@
 #define TRF_MAX_MSG_LEN TRF_RX_BUFFER_SIZE-5	//-5 to account for len, CRC, seq# and just to be safe
 
 
+
 //data rate presets
-#ifdef TRF_BITRATE_240
-	const uint16_t START_PULSE_PERIOD = 6000;
-	const uint16_t ONE_PULSE_PERIOD = 4000;
-	const uint16_t ZERO_PULSE_PERIOD = 3000;
-	const uint16_t PERIOD_HIGH_DURATION = 2000;
-	const uint16_t TRIGER_ERROR = 50;
+//these numbers are magic numbers, do not change them
+//they use the power of magic to reduce memory usage
+//if you change them even slightly you will see that memory usage will increase
+#ifdef TRF_BITRATE_200
+	const uint16_t START_PULSE_PERIOD = 5996;
+	const uint16_t ONE_PULSE_PERIOD = 3996;
+	const uint16_t ZERO_PULSE_PERIOD = 3001;
+	const uint16_t PERIOD_HIGH_DURATION = 1998;
+	const uint16_t TX_INTERVAL_CONST = 2999;
+	const uint16_t TRIGGER_ERROR = 50;
 	const uint16_t NUM_PREAMBLE_BYTES = 3;
 #endif
 
 #ifdef TRF_BITRATE_500
-	const uint16_t START_PULSE_PERIOD = 3000;
-	const uint16_t ONE_PULSE_PERIOD = 2000;
-	const uint16_t ZERO_PULSE_PERIOD = 1500;
-	const uint16_t PERIOD_HIGH_DURATION = 1000;
-	const uint16_t TRIGER_ERROR = 50;
+	const uint16_t START_PULSE_PERIOD = 3001;
+	const uint16_t ONE_PULSE_PERIOD = 2001;
+	const uint16_t ZERO_PULSE_PERIOD = 1501;
+	const uint16_t PERIOD_HIGH_DURATION = 1003;
+	const uint16_t TX_INTERVAL_CONST = 5997;
+	const uint16_t TRIGGER_ERROR = 50;
 	const uint16_t NUM_PREAMBLE_BYTES = 6;
 #endif
 
-#ifdef TRF_BITRATE_1100
-	const uint16_t START_PULSE_PERIOD = 1998;	//for some reason these weird values save 4 bytes
-	const uint16_t ONE_PULSE_PERIOD = 1002;
-	const uint16_t ZERO_PULSE_PERIOD = 752;
+#ifdef TRF_BITRATE_1000
+	const uint16_t START_PULSE_PERIOD = 1998;
+	const uint16_t ONE_PULSE_PERIOD = 1001;
+	const uint16_t ZERO_PULSE_PERIOD = 751;
 	const uint16_t PERIOD_HIGH_DURATION = 498;
-	const uint16_t TRIGER_ERROR = 30;
+	const uint16_t TX_INTERVAL_CONST = 10002;
+	const uint16_t TRIGGER_ERROR = 30;
 	const uint16_t NUM_PREAMBLE_BYTES = 15;
 #endif
 
@@ -86,23 +93,24 @@
 	#ifdef TRF_TX_UNCALIBRATED
 		#warning "This data rate is too fast for an uncalibrated ATtiny."
 	#endif
-	const uint16_t START_PULSE_PERIOD = 2000;
+	const uint16_t START_PULSE_PERIOD = 1998;
 	const uint16_t ONE_PULSE_PERIOD = 400;
 	const uint16_t ZERO_PULSE_PERIOD = 300;
 	const uint16_t PERIOD_HIGH_DURATION = 200;
-	const uint16_t TRIGER_ERROR = 30;
+	const uint16_t TX_INTERVAL_CONST = 8001;
+	const uint16_t TRIGGER_ERROR = 30;
 	const uint16_t NUM_PREAMBLE_BYTES = 30;
 #endif
 
-const uint16_t ONE_PULSE_TRIGG_ERROR = (TRIGER_ERROR + ONE_PULSE_PERIOD * TRF_CALIB_ERROR / 100);
-const uint16_t ZERO_PULSE_TRIGG_ERROR = (TRIGER_ERROR + ZERO_PULSE_PERIOD * TRF_CALIB_ERROR / 100);
-const uint16_t START_PULSE_TRIGG_ERROR = (TRIGER_ERROR + START_PULSE_PERIOD * TRF_CALIB_ERROR / 100);
+const uint16_t ONE_PULSE_TRIGG_ERROR = (TRIGGER_ERROR + ONE_PULSE_PERIOD * TRF_CALIB_ERROR / 100);
+const uint16_t ZERO_PULSE_TRIGG_ERROR = (TRIGGER_ERROR + ZERO_PULSE_PERIOD * TRF_CALIB_ERROR / 100);
+const uint16_t START_PULSE_TRIGG_ERROR = (TRIGGER_ERROR + START_PULSE_PERIOD * TRF_CALIB_ERROR / 100);
 //for some reason longer delays are more inaccurate, so our start pulse maximum needs more leeway for error
 const uint16_t START_PULSE_MAX_ERROR = 2*START_PULSE_TRIGG_ERROR;
 
 const uint16_t MIN_TX_INTERVAL_REAL = START_PULSE_PERIOD + START_PULSE_MAX_ERROR;
 //this is for end-user usage 
-const uint16_t MIN_TX_INTERVAL = (MIN_TX_INTERVAL_REAL * 2)/1000;
+const uint16_t TX_DELAY_MICROS = MIN_TX_INTERVAL_REAL * 2;
 
 
 /**

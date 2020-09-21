@@ -2,6 +2,7 @@
 #define TRF_SETTINGS_H
 
 
+
 /**
  * IMPORTANT: FOR SETTINGS THAT HAVE MULTIPLE OPTIONS ONLY ONE OPTION CAN BE ENABLED AT A TIME
  * MEANING IF YOU UNCOMMENT AN OPTION YOU HAVE TO COMMENT OUT ALL THE OTHER OPTIONS!
@@ -42,12 +43,13 @@
 /**
  * Data rate presets
  * 
- * Available presets are: TRF_BITRATE_240, TRF_BITRATE_500, TRF_BITRATE_1100, TRF_BITRATE_2500
+ * Available presets are: TRF_BITRATE_200, TRF_BITRATE_500, TRF_BITRATE_1000, TRF_BITRATE_2500
+ * These speeds are estimated speeds, they aren't accurate
  * 
  * According to the datasheet uncalibrated ATtiny13 has 10% frequency error.
  * We also need at least 30us of error margin because we use delayMicroseconds() which isn't super accurate.
  * So if our 0 pulse period is 500 then our error margin is 500-50-30 to 500+50+30
- * In my experience TRF_BITRATE_1100 was a good option with ATtiny13 as TX
+ * In my experience TRF_BITRATE_1000 was a good option with ATtiny13 as TX
  * If you are using an Arduino as TX you can go up to TRF_BITRATE_2500 speed.
  * If you need custom speeds you can define one for yourself in the header file "TinyRF.h"
  *
@@ -57,7 +59,7 @@
  * In my experiments a preabmle of ~50ms was needed (the faster the datarate the more preabmle needed).
  * However Internet suggests much shorter times.
 **/
-#define TRF_BITRATE_1100
+#define TRF_BITRATE_1000
 
 
 /**
@@ -104,6 +106,7 @@
 **/
 //#define TRF_EOT_IN_TX
 //#define TRF_EOT_NONE
+
 
 
 #endif	/* TRF_SETTINGS_H */

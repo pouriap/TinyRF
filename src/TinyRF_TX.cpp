@@ -85,7 +85,7 @@ void send(byte* data, uint8_t len, boolean incrementSeq){
 		digitalWrite(TRF_TX_PIN, LOW);
 	}
 #else
-	//delayMicroseconds(MIN_TX_INTERVAL*2);
+	//delayMicroseconds(MIN_TX_INTERVAL_REAL*2);
 #endif
 
 }
@@ -96,7 +96,7 @@ void sendMulti(byte data[], uint8_t len, uint8_t times){
 		//we wait more than we should because: 
 		//1- if there is noise we want it to go away
 		//2- prevent receiver buffer from getting full due to very fast transmissions
-		delayMicroseconds(MIN_TX_INTERVAL_REAL + 10000);
+		delayMicroseconds(MIN_TX_INTERVAL_REAL + TX_INTERVAL_CONST);
 	}
 	#ifndef TRF_SEQ_DISABLED
 	seq++;
@@ -122,5 +122,6 @@ void transmitByte(byte _byte){
 		//all pulses have the same HIGH duration
 		digitalWrite(TRF_TX_PIN, HIGH);
 		delayMicroseconds(PERIOD_HIGH_DURATION);
+		
 	}while(i--);
 }
