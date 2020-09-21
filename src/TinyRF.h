@@ -89,15 +89,15 @@
 	const uint16_t NUM_PREAMBLE_BYTES = 15;
 #endif
 
-#ifdef TRF_BITRATE_2500
+#ifdef TRF_BITRATE_2000
 	#ifdef TRF_TX_UNCALIBRATED
 		#warning "This data rate is too fast for an uncalibrated ATtiny."
 	#endif
 	const uint16_t START_PULSE_PERIOD = 1998;
-	const uint16_t ONE_PULSE_PERIOD = 400;
-	const uint16_t ZERO_PULSE_PERIOD = 300;
-	const uint16_t PERIOD_HIGH_DURATION = 200;
-	const uint16_t TX_INTERVAL_CONST = 8001;
+	const uint16_t ONE_PULSE_PERIOD = 601;
+	const uint16_t ZERO_PULSE_PERIOD = 451;
+	const uint16_t PERIOD_HIGH_DURATION = 298;
+	const uint16_t TX_INTERVAL_CONST = 8002;
 	const uint16_t TRIGGER_ERROR = 30;
 	const uint16_t NUM_PREAMBLE_BYTES = 30;
 #endif

@@ -26,6 +26,6 @@ void loop(){
   // it is socially more responsible to use fewer repetition to minimize your usage of the bandwidth
   sendMulti((byte*)msg, strlen(msg), 10);
 
-  delay(1000);
+  delayMicroseconds(TX_DELAY_MICROS);
   
 }
