@@ -20,7 +20,10 @@ The transmitter code is small in size making it suitable for microcontrollers wi
 **Arduino IDE support:** Arduino IDE 1.6.0 and higher.
 
 ## How to install the library
-Download the [latest release](https://github.com/pouriap/TinyRF/releases/latest) and copy the contents in your Arduino "libraries" folder. Restart Arduino IDE.
+- Download the [latest release](https://github.com/pouriap/TinyRF/releases/latest) 
+- Open Arduino IDE and go to Sketch -> Include Library -> Add .ZIP Library...
+- Alternativey you can copy the contents of the zip file in your Arduino "libraries" folder. 
+- Restart Arduino IDE.
 
 ## Usage notes:
 * The internal clock(s) of the ATtiny13 can be inaccurate. Specially the 4.8MHz oscillator because by default only the calibration data for the 9.6MHz oscillator is copied. I highly recommend that you [calibrate your chip](https://github.com/MCUdude/MicroCore#internal-oscillator-calibration) to get more accurate timings. The library might not even work depending on how inaccurate your chip is.
