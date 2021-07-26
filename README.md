@@ -15,7 +15,7 @@ The transmitter code is small in size making it suitable for microcontrollers wi
 
 **Transmitter MCU support:** ATtiny13 or any other AVR microcontroller you can program with Arduino IDE.
 
-**Receiver MCU support:** Arduino is recommended. But any other AVR microcontroller that runs at 16MHz cpu speed or higher and has at least one external interrupt pin with sufficient Flash memory (>4KB) should work. 
+**Receiver MCU support:** Arduino is recommended. But any other AVR microcontroller that runs at 16MHz cpu speed or higher and has at least one external interrupt pin with sufficient Flash memory (>4KB) should work. ESP is also supported.
 
 **Arduino IDE support:** Arduino IDE 1.6.0 and higher.
 
