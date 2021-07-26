@@ -3,6 +3,49 @@
 
 #include "TinyRF.h"
 
+/**
+ * Board detection
+**/
+#if defined(__AVR_ATtiny2313__) || defined(__AVR_ATtiny4313__)
+	#define TRF_MCU_TinyX313
+#elif defined(__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__)
+	#define TRF_MCU_TinyX4
+#elif defined(__AVR_ATtiny25__) || defined(__AVR_ATtiny45__) || defined(__AVR_ATtiny85__)
+	#define TRF_MCU_TinyX5
+#elif defined(__AVR_ATtiny167__) || defined(__AVR_ATtiny87__)
+	#define TRF_MCU_TinyX7
+#elif defined(ESP8266) || defined(ESP32)
+	#define TRF_MCU_ESP
+#endif
+
+
+// fix for Digispark boards
+//todo: find a way to make sure it's a digispark board
+#if !defined(digitalPinToInterrupt)
+
+	#ifndef NOT_AN_INTERRUPT
+		#define NOT_AN_INTERRUPT -1
+	#endif
+
+	#if defined(TRF_MCU_TinyX313)
+		#define digitalPinToInterrupt(p)  ((p) == 4 ? 0 : ((p) == 5 ? 1 : NOT_AN_INTERRUPT))
+
+	#elif defined(TRF_MCU_TinyX4)
+		#define digitalPinToInterrupt(p)  ((p) == 2 ? 0 : NOT_AN_INTERRUPT)
+
+	#elif defined(TRF_MCU_TinyX5)
+		#define digitalPinToInterrupt(p)  ((p) == 2 ? 0 : NOT_AN_INTERRUPT)
+
+	#elif defined(TRF_MCU_TinyX7)
+		#define digitalPinToInterrupt(p)  ((p) == 3 ? 0 : ((p) == 9 ? 1 : NOT_AN_INTERRUPT))
+
+	#else
+		#error "This board is not supported, please make an issue on the TinyRF github page to add this board."
+
+	#endif
+
+#endif
+
 
 /**
  * Error codes returned by getReceivedData()

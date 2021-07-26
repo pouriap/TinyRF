@@ -1,11 +1,16 @@
 #include "TinyRF_RX.h"
 
-// you can only use pins that support external interrupts
-// in Arduino Uno this is pins 2 and 3
-int rxPin = 2;
+// the pin which will be connected to receiver module
+// this pin has to support EXTERNAL interrupts
+// on Arduino and similar boards this is pin 2 & 3
+// on Digispark pro it's pin 3 & 9
+// on ESP it's all GPIO pins except GPIO16, but using a pin that doesn't have an 
+// alternate function such as pin 12-14 is recommended
+uint8_t rxPin = 2;
 
 void setup(){
   Serial.begin(115200);
+  //make sure you call this in your setup
   setupReceiver(rxPin);
 }
 

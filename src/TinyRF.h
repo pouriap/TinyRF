@@ -6,7 +6,7 @@
 
 //#define DEBUG
 
-//enable serial output if board is not ATtiny13 (assuming using MicroCore)
+//enable serial output if board is not ATtiny13
 //used for developement debugging
 #ifndef __AVR_ATtiny13__
 	#define TRF_SERIAL_ENABLE

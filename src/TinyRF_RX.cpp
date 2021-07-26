@@ -208,7 +208,11 @@ inline void process_received_byte(){
  * This interrupt routine usually take 8us - sometimes goes up to 30us
  * With our 100+us pulse periods this shouldn't be a problem
 **/
-void interrupt_routine(){
+#ifdef TRF_MCU_ESP
+	IRAM_ATTR void interrupt_routine(){
+#else
+	void interrupt_routine(){
+#endif
 
 	using namespace tinyrf;
 
