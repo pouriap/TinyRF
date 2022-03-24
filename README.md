@@ -159,7 +159,9 @@ Types".
 ## Using ATtiny85 as receiver
 You can use ATtiny85 as the receiver but you have to be careful in order to not run out of RAM. Specifically you have to reduce the buffer size in `Settings.h` (`TRF_RX_BUFFER_SIZE`) to a smaller value such as 16. The buffers you use in your code for storing data should also be as small as possible.
 
-For convenience I have included another library in the release page called `TinyRF_85` which has the necessary changes made into it. You can have both `TinyRF` and `TinyRF_85` installed at the same time.
+Other similar low memory microcontrollers are not tested but should work given they have enough RAM and FLASH memory available.
+
+For convenience I have included another library in the release page called `TinyRF_85` which has the buffer size reduced. You can install it alongside the normal TinyRF library and include it whenever you want to use an ATtiny85 or similar microcontroller as receiver. This way you don't have to keep changing the buffer size in `Settings.h` every time you use a low memory MCU.
 
 ## How to use without Arduino?
 In order to make the library easy to use for Arduino users I have written the library with Arduino functions such as `digitalWrite()` and `delayMicroseconds()`. The optimizer automatically takes care of them and they don't add an overhead (tested with ATtiny13 + MicroCore). If you want to use it in a pure C AVR project you'll have to replace the functions yourself.
