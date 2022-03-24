@@ -79,6 +79,9 @@
  * The size of the buffer depends on how much RAM you have available, how big your messages are,
  * how frequently you send them and how frequently you call getReceivedData() in your receiver code
  * Note that when you use sendMulti() all of the messages will be stored in buffer until read with getReceivedData()
+ * How to calculate: 
+ * minimum buffer size = (message length + 3) * repetition
+ * So if you wanna do sendMulti("hello", 5, 2) you're gonna need (5 + 3) * 2 = 16 bytes of buffer
 **/
 #define TRF_RX_BUFFER_SIZE 128
 

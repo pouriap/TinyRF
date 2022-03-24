@@ -13,9 +13,9 @@ The transmitter code is small in size making it suitable for microcontrollers wi
 * Ability to disable features in order to preserve memory space
 * Small memory footprint: 176 bytes Flash, 1 byte RAM with all features enabled
 
-**Transmitter MCU support:** ATtiny13 or any other AVR microcontroller you can program with Arduino IDE.
+**Transmitter MCU support:** ATtiny13 or any other microcontroller you can program with Arduino IDE.
 
-**Receiver MCU support:** Arduino is recommended. But any other AVR microcontroller that runs at 16MHz cpu speed or higher and has at least one external interrupt pin with sufficient Flash memory (>4KB) should work. ESP is also supported.
+**Receiver MCU support:** The receiver code needs more RAM and FLASH memory so it's not possible to use ATtiny13 as the receiver. It is recommended to use an Arduino as receiver because it has sufficient speed, RAM and FLASH memory. ESP8266 and ESP32 are also supported. You can even use an ATtiny85 as the receiver! (see [ATtiny85 Receiver](#using-attiny85-as-receiver))
 
 **Arduino IDE support:** Arduino IDE 1.6.0 and higher.
 
@@ -62,7 +62,7 @@ void loop(){
   // too long previous messages will get overwritten in the buffer
   // you can change the buffer size in settings.h
   // it is socially more responsible to use fewer repetition to minimize your usage of the bandwidth
-  sendMulti((byte*)msg, strlen(msg), 10);
+  sendMulti((byte*)msg, strlen(msg), 5);
 
   delayMicroseconds(TX_DELAY_MICROS);
   
@@ -127,16 +127,20 @@ void loop(){
   // this means all you need to do is check if the return code is TRF_ERR_SUCCESS
   // these are non-repeated, crc-valid messages
   if(err == TRF_ERR_SUCCESS){
+
     Serial.print("Received: ");
+
     for(int i=0; i<numRcvdBytes; i++){
       Serial.print((char)buf[i]);
     }
+
     Serial.println("");
 
     if(numLostMsgs>0){
       Serial.print(numLostMsgs);
       Serial.println(" messages were lost before this message.");
     }
+
   }
   
 }
@@ -151,6 +155,11 @@ If you're running out of memory here are a few TinyRF-specific and general hints
 * Check out [Efficient C Coding for AVR](https://teslabs.com/openplayer/docs/docs/prognotes/efficient_c_coding_avr.pdf). Specially the section about "Variables and Data
 Types".
 * Use Atmel Studio and write in pure C instead of using Arduino. There is some overhead when using even the `setup()` and `loop()` function so if you need every last byte you should forget Arduino libraries and just use purce C.
+
+## Using ATtiny85 as receiver
+You can use ATtiny85 as the receiver but you have to be careful in order to not run out of RAM. Specifically you have to reduce the buffer size in `Settings.h` (`TRF_RX_BUFFER_SIZE`) to a smaller value such as 16. The buffers you use in your code for storing data should also be as small as possible.
+
+For convenience I have included another library in the release page called `TinyRF_85` which has the necessary changes made into it. You can have both `TinyRF` and `TinyRF_85` installed at the same time.
 
 ## How to use without Arduino?
 In order to make the library easy to use for Arduino users I have written the library with Arduino functions such as `digitalWrite()` and `delayMicroseconds()`. The optimizer automatically takes care of them and they don't add an overhead (tested with ATtiny13 + MicroCore). If you want to use it in a pure C AVR project you'll have to replace the functions yourself.
