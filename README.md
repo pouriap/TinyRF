@@ -15,7 +15,7 @@ The transmitter code is small in size making it suitable for microcontrollers wi
 
 **Transmitter MCU support:** ATtiny13 or any other microcontroller you can program with Arduino IDE.
 
-**Receiver MCU support:** The receiver code needs more RAM and FLASH memory so it's not possible to use ATtiny13 as the receiver. It is recommended to use an Arduino as receiver because it has sufficient speed, RAM and FLASH memory. ESP8266 and ESP32 are also supported. You can even use an ATtiny85 as the receiver! (see [ATtiny85 Receiver](#using-attiny85-as-receiver))
+**Receiver MCU support:** As of version 2.0 of the library even an ATtiny13 can be used as the receiver! However the proper header files have to be included. Please read the [library setup](#library-setup) section for more info.
 
 **Arduino IDE support:** Arduino IDE 1.6.0 and higher.
 
@@ -25,126 +25,31 @@ The transmitter code is small in size making it suitable for microcontrollers wi
 - Alternativey you can copy the contents of the zip file in your Arduino "libraries" folder. 
 - Restart Arduino IDE.
 
-## Usage notes:
+## Usage notes
+* This library has multiple configurations. Please avoid including it using the "include library" feature and use the examples as the starting point. The libaray changes behavior based on what header files you include.
+* Tips and information about using the libaray are provided in the comments of example files. Make sure to read them.
 * The internal clock(s) of the ATtiny13 can be inaccurate. Specially the 4.8MHz oscillator because by default only the calibration data for the 9.6MHz oscillator is copied. I highly recommend that you [calibrate your chip](https://github.com/MCUdude/MicroCore#internal-oscillator-calibration) to get more accurate timings. The library might not even work depending on how inaccurate your chip is.
-* Make sure you call `getReceivedData()` as frequently as possible in your receiver sketch loop.
-* You can technically send messages as long as 250 Bytes long but that is not recommended. The longer your messages are the more susceptible to noise they become. Also the error checking byte will detect less and less errors the longer your message is.
-* Don't use Arduino IDE's "include library" feature, as it will include unnecessary files. Just include "TinyRF_TX.h" or "TinyRF_RX.h" at the beggining of your sketch.
-* Documentation is provided in form of comments in the example transmitter and receiver sketches.
+* Make sure you call `getReceivedData()` as frequently as possible in your receiver sketch loop. Specially if you are using the **Tiny13** version of the library since it does not have a buffer.
+* In the **Standard** version of the library you can technically send messages as long as 250 Bytes long but that is not recommended. The longer your messages are the more susceptible to noise they become. Also the error checking byte will detect less and less errors the longer your message is.
 * Check out `Settings.h` to find out which settings are available and what they do.
-* Don't forget proper powering! A 0.1uF decoupling cap for the MCU is **mandatory**. I personally recommend an additional 22uF across the MCU and at least 100uF across the transmitter module. Also use a nice and stable power source. This will minimize errors and headaches.
+* Don't forget proper powering! A 0.1uF decoupling cap for the MCU is **mandatory**. I personally recommend an additional 22uF across the MCU and at least 100uF across the transmitter and receiver modules. Also use a nice and stable power source. This will minimize errors and headaches.
 
-### Transmitter sketch:
-```C++
-#include "TinyRF_TX.h"
-
-void setup(){
-  // transmitter default pin is pin #2. You can change it by editing Settings.h
-  setupTransmitter();
-}
-
-void loop(){
-
-  const char* msg = "Hello from far away!";
-
-  //send function accepts an array of bytes as first argument
-  //second argument is the length of the array
-  send((byte*)msg, strlen(msg));
-
-  //make sure there's at least a TX_DELAY_MICROS delay between transmissions
-  //otherwise the receiver's behavior will be undefined
-  delayMicroseconds(TX_DELAY_MICROS);
-
-  // you can provide a third argument to send a message multiple times
-  // this is for reliability in case some messages get lost in the way
-  // when sending multiple messages make sure you call getReceivedData() frequently in the receiver 
-  // the receiver has a circular FIFO buffer, if you send too many messages and/or if they are
-  // too long previous messages will get overwritten in the buffer
-  // you can change the buffer size in settings.h
-  // it is socially more responsible to use fewer repetition to minimize your usage of the bandwidth
-  sendMulti((byte*)msg, strlen(msg), 5);
-
-  delayMicroseconds(TX_DELAY_MICROS);
+## Library setup
+Depending on what MCU you are using as the receiver you have to include different files in your sketch and take certain considerations into account:
+* **Standard version (Arduino Uno and similar):** Since these microcontrollers have enough RAM and FLASH memory the standard library files can be used with them. The standard library has features like a large circular buffer, automatic sequence numbering, better error chekcing and certain helper functions. 
   
-}
-```
-
-### Receiver sketch:
-```C++
-#include "TinyRF_RX.h"
-
-// the pin which will be connected to receiver module
-// this pin has to support EXTERNAL interrupts
-// on Arduino and similar boards this is pin 2 & 3
-// on Digispark pro it's pin 3 & 9
-// on ESP it's all GPIO pins except GPIO16, but using a pin that doesn't have an 
-// alternate function such as pin 12-14 is recommended
-uint8_t rxPin = 2;
-
-void setup(){
-  Serial.begin(115200);
-  //make sure you call this in your setup
-  setupReceiver(rxPin);
-}
-
-void loop(){
-
-  const uint8_t bufSize = 30;
-  byte buf[bufSize];
-  uint8_t numLostMsgs = 0;
-  uint8_t numRcvdBytes = 0;
-
-  // number of received bytes will be put in numRcvdBytes
-  // if sequence numbering is enabled the number of lost messages will be put in numLostMsgs
-  // if you have disabled sequence numbering or don't need number of lost messages you can omit this argument
-  uint8_t err = getReceivedData(buf, bufSize, numRcvdBytes, numLostMsgs);
-
-  // the receiver has a circular FIFO buffer
-  // if getReceivedData() isn't called frequently enough then older messages will get overwritten
-  // so make sure the frequency at which you send messages in your tx code is slower than the frequency
-  // at which you call getReceivedData() in your rx code to prevent that
-  // specially when you are using sendMulti()
-  // duplicate messages that are sent using sendMulti() will stay in the buffer until you read the first one
-  // you can change the buffer size in settings.h
-
-  if(err == TRF_ERR_NO_DATA){
-    return;
-  }
-
-  if(err == TRF_ERR_BUFFER_OVERFLOW){
-    Serial.println("Buffer too small for received data!");
-    return;
-  }
-
-  if(err == TRF_ERR_CORRUPTED){
-    Serial.println("Received corrupted data.");
-    return;
-  }
-
-  // if sequence numbering is enabled and you use the sendMulti() function for sending a message
-  // multiple times then getReceivedData() will return TRF_ERR_SUCCESS only once
-  // all the duplicate messages will be automatically ignored
-  // this means all you need to do is check if the return code is TRF_ERR_SUCCESS
-  // these are non-repeated, crc-valid messages
-  if(err == TRF_ERR_SUCCESS){
-
-    Serial.print("Received: ");
-
-    for(int i=0; i<numRcvdBytes; i++){
-      Serial.print((char)buf[i]);
-    }
-
-    Serial.println("");
-
-    if(numLostMsgs>0){
-      Serial.print(numLostMsgs);
-      Serial.println(" messages were lost before this message.");
-    }
-
-  }
+  Include `TinyRF_TX.h` and `TinyRF_RX.h` to use this version of the library. Refer to the "Standard" subfolder of the examples for more info.
+* **Tiny85 version (ATtiny85):** Currently there is a specific version for ATtiny85 that has all the features of the standard version only with a smaller 16-byte buffer. This version is intended to be deprecated in the future.  
   
-}
-```
+  Include `TinyRF_85_TX.h` and `TinyRF_85_RX.h` to use this version of the library.Refer to the "Tiny85" subfolder of the examples for more info. 
+* **Tiny13 version (ATtiny13/25/45/85 + ATmega328):** As of version 2.0 of the library even ATtiny13 can be used as the receiver. This version of the library is completely different from the standard version with many limitations:
+  1. Only two bytes of data can be sent in each packet (a `uin16_t` value)
+  2. There is no buffer in the receiver and if data is not read in time it will be lost
+  3. Fancy stuff such as sequence numbering and sendMulti() function are removed and if you need such functionaltiy you should implement them yourself.
+  
+  This version also supports Arduino Uno (ATmega328P) as the receiver so if for any reason you are low on resources you can use this version of the library with the UNO as receiver.  
+  
+  Include `TinyRF_13_TX.h` and `TinyRF_13_RX.h` to use this version of the library.Refer to the "Tiny13" subfolder of the examples for more info.
 
 ## How to reduce memory usage?
 If you're running out of memory here are a few TinyRF-specific and general hints:
@@ -155,13 +60,6 @@ If you're running out of memory here are a few TinyRF-specific and general hints
 * Check out [Efficient C Coding for AVR](https://teslabs.com/openplayer/docs/docs/prognotes/efficient_c_coding_avr.pdf). Specially the section about "Variables and Data
 Types".
 * Use Atmel Studio and write in pure C instead of using Arduino. There is some overhead when using even the `setup()` and `loop()` function so if you need every last byte you should forget Arduino libraries and just use purce C.
-
-## Using ATtiny85 as receiver
-You can use ATtiny85 as the receiver but you have to be careful in order to not run out of RAM. Specifically you have to reduce the buffer size in `Settings.h` (`TRF_RX_BUFFER_SIZE`) to a smaller value such as 16. The buffers you use in your code for storing data should also be as small as possible.
-
-Other similar low memory microcontrollers are not tested but should work given they have enough RAM and FLASH memory available.
-
-For convenience I have included another library in the release page called `TinyRF_85` which has the buffer size reduced. You can install it alongside the normal TinyRF library and include it whenever you want to use an ATtiny85 or similar microcontroller as receiver. This way you don't have to keep changing the buffer size in `Settings.h` every time you use a low memory MCU.
 
 ## How to use without Arduino?
 In order to make the library easy to use for Arduino users I have written the library with Arduino functions such as `digitalWrite()` and `delayMicroseconds()`. The optimizer automatically takes care of them and they don't add an overhead (tested with ATtiny13 + MicroCore). If you want to use it in a pure C AVR project you'll have to replace the functions yourself.
