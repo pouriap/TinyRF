@@ -1,4 +1,7 @@
-#include "TinyRF_TX.h"
+#ifndef TRF_85_TX_CPP
+#define TRF_85_TX_CPP
+
+#include "TinyRF_85_TX.h"
 
 #ifndef TRF_SEQ_DISABLED
 	uint8_t seq = 0;
@@ -125,3 +128,5 @@ void transmitByte(byte _byte){
 		
 	}while(i--);
 }
+
+#endif /* TRF_85_TX_CPP */

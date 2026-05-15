@@ -1,5 +1,5 @@
-#ifndef TRF_SETTINGS_H
-#define TRF_SETTINGS_H
+#ifndef TRF_TINY_SETTINGS_H
+#define TRF_TINY_SETTINGS_H
 
 
 
@@ -112,4 +112,4 @@
 
 
 
-#endif	/* TRF_SETTINGS_H */
+#endif	/* TRF_TINY_SETTINGS_H */

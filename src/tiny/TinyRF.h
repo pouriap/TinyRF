@@ -1,8 +1,8 @@
-#ifndef TRF_H
-#define TRF_H
+#ifndef TRF_TINY_H
+#define TRF_TINY_H
 
 #include "Arduino.h"
-#include "Settings.h"
+#include "TinyRF_Settings.h"
 
 //#define DEBUG
 
@@ -120,4 +120,4 @@ byte checksum8(byte data[], uint8_t len, uint8_t seq = 0);
 byte crc8(byte data[], uint8_t len, uint8_t seq = 0);
 
 
-#endif  /* TRF_H */ 
+#endif  /* TRF_TINY_H */ 

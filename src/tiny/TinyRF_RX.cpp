@@ -1,5 +1,7 @@
-#include "TinyRF_RX.h"
+#ifndef TRF_TINY_RX_CPP
+#define TRF_TINY_RX_CPP
 
+#include "TinyRF_RX.h"
 
 /*
 notes:
@@ -485,3 +487,5 @@ uint8_t getReceivedData(byte buf[],  uint8_t bufSize, uint8_t &numRcvdBytes){
 	uint8_t l = 0;
 	return getReceivedData(buf, bufSize, numRcvdBytes, l);
 }
+
+#endif /* TRF_TINY_RX_CPP */

@@ -1,4 +1,7 @@
-#include "TinyRF.h"
+#ifndef TRF_85_CPP
+#define TRF_85_CPP
+
+#include "TinyRF_85.h"
 
 //1-byte 1-s compliment checksum, supposedly the algorithm used in TCP
 byte checksum8(byte data[], uint8_t len, uint8_t seq){
@@ -33,3 +36,5 @@ byte crc8(byte data[], uint8_t len, uint8_t seq){
 	}
 	return crc;
 }
+
+#endif /* TRF_85_CPP */
